@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "holiday-destination-finder"
+version = "0.0.1"
+requires-python = ">=3.11"
+
+dependencies = [
+    "requests",
+    "pandas",
+    "python-dateutil",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
