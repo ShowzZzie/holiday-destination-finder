@@ -26,11 +26,17 @@ def main(origin, start, end, top_n: int = 10):
             except requests.exceptions.RequestException as e:
                 print(f"Weather failed for {city} ({airport}): {e}", flush=True)
                 continue
+            except Exception as e:
+                print(f"BUG in weather logic for {city} ({airport}): {e}", flush=True)
+                continue
 
             try:
                 flight_price = get_cheapest_flight_prices(origin, airport, start, end)
             except requests.exceptions.RequestException as e:
                 print(f"Price failed for {city} ({airport}): {e}", flush=True)
+                continue
+            except Exception as e:
+                print(f"BUG in price logic for {city} ({airport}): {e}", flush=True)
                 continue
 
             trip_score = total_score(avg_temp, flight_price)
