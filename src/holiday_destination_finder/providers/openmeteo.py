@@ -12,10 +12,7 @@ def _get_json_with_retries(url: str, *, retries: int = 3, timeout=(5, 30)):
             resp = _SESSION.get(url, timeout=timeout)
             resp.raise_for_status()
             return resp.json()
-        except (requests.exceptions.ConnectTimeout,
-                requests.exceptions.ReadTimeout,
-                requests.exceptions.SSLError,
-                requests.exceptions.ConnectionError) as e:
+        except requests.exceptions.RequestException as e:
             last_exc = e
             # exponential backoff: 0.5, 1.0, 2.0 ...
             time.sleep(0.5 * (2 ** attempt))
@@ -27,6 +24,8 @@ def get_weather_data(lat, lon, start_date, end_date):
     
     today=date.today()
     end_date_f = date.fromisoformat(end_date)
+    lat = round(float(lat), 4)
+    lon = round(float(lon), 4)
 
     if end_date_f <= today + timedelta(days=14):
         url=f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&start_date={start_date}&end_date={end_date}"
@@ -34,7 +33,7 @@ def get_weather_data(lat, lon, start_date, end_date):
     else:
         url=f"https://climate-api.open-meteo.com/v1/climate?latitude={lat}&longitude={lon}&start_date={start_date}&end_date={end_date}&models=CMCC_CM2_VHR4&daily=temperature_2m_max,temperature_2m_min,precipitation_sum"
         source = "climate"
-    
+
     key = (lat, lon, start_date, end_date, source)
     if key in _CACHE:
         return _CACHE[key]
