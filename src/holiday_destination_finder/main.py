@@ -1,13 +1,16 @@
 from holiday_destination_finder.providers.openmeteo import get_weather_data
 from holiday_destination_finder.providers.amadeus import get_cheapest_flight_prices
 from holiday_destination_finder.scoring import total_score
-import csv, argparse, datetime
+from pathlib import Path
+import csv, argparse, datetime, requests
+
 
 def main(origin, start, end, top_n: int = 10):
 
     results = []
+    CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities.csv"
 
-    with open('data/cities.csv', 'r') as cities_csv:
+    with open(CITIES_CSV, newline="", encoding="utf-8") as cities_csv:
         reader = csv.DictReader(cities_csv)
 
         for row in reader:
@@ -18,8 +21,18 @@ def main(origin, start, end, top_n: int = 10):
             lon = row['lon']
             airport = row['airport']
             
-            avg_temp = get_weather_data(float(lat), float(lon), start, end)
-            flight_price = get_cheapest_flight_prices(origin, airport, start, end)
+            try:
+                avg_temp = get_weather_data(float(lat), float(lon), start, end)
+            except requests.exceptions.RequestException as e:
+                print(f"Weather failed for {city} ({airport}): {e}", flush=True)
+                continue
+
+            try:
+                flight_price = get_cheapest_flight_prices(origin, airport, start, end)
+            except requests.exceptions.RequestException as e:
+                print(f"Price failed for {city} ({airport}): {e}", flush=True)
+                continue
+
             trip_score = total_score(avg_temp, flight_price)
             
             if flight_price != "N/A":

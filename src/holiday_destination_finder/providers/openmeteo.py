@@ -1,5 +1,27 @@
+import time
 import requests
 from datetime import date, timedelta
+
+_SESSION = requests.Session()
+_CACHE = {}
+
+def _get_json_with_retries(url: str, *, retries: int = 3, timeout=(5, 30)):
+    last_exc = None
+    for attempt in range(retries):
+        try:
+            resp = _SESSION.get(url, timeout=timeout)
+            resp.raise_for_status()
+            return resp.json()
+        except (requests.exceptions.ConnectTimeout,
+                requests.exceptions.ReadTimeout,
+                requests.exceptions.SSLError,
+                requests.exceptions.ConnectionError) as e:
+            last_exc = e
+            # exponential backoff: 0.5, 1.0, 2.0 ...
+            time.sleep(0.5 * (2 ** attempt))
+    # after retries exhausted
+    raise last_exc
+
 
 def get_weather_data(lat, lon, start_date, end_date):
     
@@ -13,9 +35,12 @@ def get_weather_data(lat, lon, start_date, end_date):
         url=f"https://climate-api.open-meteo.com/v1/climate?latitude={lat}&longitude={lon}&start_date={start_date}&end_date={end_date}&models=CMCC_CM2_VHR4&daily=temperature_2m_max,temperature_2m_min,precipitation_sum"
         source = "climate"
     
-    response = requests.get(url, timeout=10)
-    response.raise_for_status()
-    data=response.json()
+    key = (lat, lon, start_date, end_date, source)
+    if key in _CACHE:
+        return _CACHE[key]
+
+    data = _get_json_with_retries(url, retries=3, timeout=(5, 30))
+
     temps_max = data["daily"]["temperature_2m_max"]
     temps_min = data["daily"]["temperature_2m_min"]
     precipitation = data["daily"]["precipitation_sum"]
@@ -31,9 +56,12 @@ def get_weather_data(lat, lon, start_date, end_date):
 
     avg_temp_c = round(sum(daily_avg_temps) / len(daily_avg_temps), 1)
     avg_precip_mm_per_day = round(sum(precipitation) / len(precipitation), 2)
-
-    return {
+    
+    result = {
         "avg_temp_c" : avg_temp_c,
         "avg_precip_mm_per_day" : avg_precip_mm_per_day,
         "source": source
     }
+    _CACHE[key] = result
+
+    return result
