@@ -13,7 +13,7 @@ def get_weather_data(lat, lon, start_date, end_date):
         url=f"https://climate-api.open-meteo.com/v1/climate?latitude={lat}&longitude={lon}&start_date={start_date}&end_date={end_date}&models=CMCC_CM2_VHR4&daily=temperature_2m_max,temperature_2m_min,precipitation_sum"
         source = "climate"
     
-    response = requests.get(url, timeout=50)
+    response = requests.get(url, timeout=10)
     response.raise_for_status()
     data=response.json()
     temps_max = data["daily"]["temperature_2m_max"]
