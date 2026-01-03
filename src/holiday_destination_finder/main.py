@@ -8,11 +8,14 @@ def main():
     #prices = get_cheapest_flight_prices('WRO', 'LIS', '2026-01-07', '2026-01-11')
 
     with open('data/cities.csv', 'r') as cities_csv:
-        reader = csv.reader(cities_csv)
-        next(reader) # Skip header row
+        reader = csv.DictReader(cities_csv)
 
         for row in reader:
-            city, country, lat, lon, airport = row
+            city = row['city']
+            country = row['country']
+            lat = row['lat']
+            lon = row['lon']
+            airport = row['airport']
             print(lat, lon)
             avg_temp = get_weather_data(lat, lon, '2026-01-07', '2026-01-11')
             flight_price = get_cheapest_flight_prices('WRO', airport, '2026-01-07', '2026-01-11')
