@@ -43,18 +43,33 @@ def get_amadeus_token():
     return payload["access_token"], payload["expires_in"]
 
 
-def get_cheapest_flight_prices(origin, destination, start_date, end_date):
 
-    """
-    curl "https://test.api.amadeus.com/v1/security/oauth2/token" \
-     -H "Content-Type: application/x-www-form-urlencoded" \
-     -d "grant_type=client_credentials&client_id={client_id}&client_secret={client_secret}"
-     """
+def get_cheapest_flight_prices(origin, destination, start_date, end_date):
     
     url = "https://test.api.amadeus.com/v2/shopping/flight-offers"
+
+    resp = _SESSION.get(
+        url,
+        headers = {
+            "Authorization": f"Bearer {get_amadeus_token()}"
+        },
+        params = {
+            "originLocationCode": origin,
+            "destinationLocationCode": destination,
+            "departureDate": start_date,
+            "returnDate": end_date,
+            "adults": 1,
+            "max": 10,
+        }
+    )
+
     print(get_amadeus_token())
 
     return stub_prices.get(destination, "N/A")
+
+
+
+
 
 if __name__ == "__main__":
     print(get_cheapest_flight_prices("WRO", "CTA", "2026-01-06", "2026-01-13"))
