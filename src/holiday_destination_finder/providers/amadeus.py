@@ -23,17 +23,6 @@ _TOKEN_CACHE = {
     "expires_at": 0,  # unix timestamp
 }
 
-import os
-import time
-import requests
-
-_SESSION = requests.Session()
-
-_TOKEN_CACHE = {
-    "access_token": None,
-    "expires_at": 0,  # unix timestamp
-}
-
 def get_amadeus_token():
     api_key = os.getenv("AMADEUS_API_KEY")
     api_secret = os.getenv("AMADEUS_API_SECRET")

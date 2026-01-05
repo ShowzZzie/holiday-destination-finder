@@ -7,6 +7,13 @@ import csv, argparse, datetime, requests
 
 def main(origin, start, end, top_n: int = 10):
 
+    if origin is None:
+        origin = "WRO"
+    if start is None:
+        start = "2026-01-15"
+    if end is None:
+        end = "2026-01-22"
+
     results = []
     CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities.csv"
 
@@ -62,7 +69,7 @@ def main(origin, start, end, top_n: int = 10):
     results.sort(key=lambda x: float(x.get('score', 0)), reverse=True)
     print("Pos | City (Airport) — Score | Flight Price | Stops | Avg Temp | Avg Rainfall")
     for i, row in enumerate(results[:top_n], start=1):
-        print(f"{i}. {row['city']} ({row['airport']}) — Score: {row['score']:.2f} | {row['flight_price']} | Stops: {row['total_stops']} | {row['avg_temp_c']}°C | {row['avg_precip_mm_per_day']}mm/day")
+        print(f"{i}. {row['city']} ({row['airport']}) — Score: {row['score']:.2f} | {row['currency']} {row['flight_price']} | Stops: {row['total_stops']} | {row['avg_temp_c']}°C | {row['avg_precip_mm_per_day']}mm/day")
 
 
 def valid_date(s):
@@ -75,9 +82,9 @@ def valid_date(s):
 
 def parse_args():
     p = argparse.ArgumentParser(description="Holiday Destination Finder")
-    p.add_argument("--origin", "-o", type=str, help="Origin airport IATA code", required=True)
-    p.add_argument("--start", "-s", type=valid_date, help="Start date (YYYY-MM-DD)", required=True)
-    p.add_argument("--end", "-e", type=valid_date, help="End date (YYYY-MM-DD)", required=True)
+    p.add_argument("--origin", "-o", type=str, help="Origin airport IATA code")
+    p.add_argument("--start", "-s", type=valid_date, help="Start date (YYYY-MM-DD)")
+    p.add_argument("--end", "-e", type=valid_date, help="End date (YYYY-MM-DD)")
     p.add_argument("--top_n", "-t", type=int, default = 10, help="Number of top destinations to display")
     return p.parse_args()
 

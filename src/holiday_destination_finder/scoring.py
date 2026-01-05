@@ -1,6 +1,6 @@
 from holiday_destination_finder.providers.amadeus import stub_prices
 
-def total_score(weather_data, flight_price):
+def total_score(weather_data, flight_price, total_stops):
     if flight_price in (None, "N/A"):
         return weather_score(weather_data) * 0.4
     return price_score(flight_price) * 0.6 + weather_score(weather_data) * 0.4
