@@ -31,34 +31,38 @@ def main(origin, start, end, top_n: int = 10):
                 continue
 
             try:
-                flight_price = get_cheapest_flight_prices(origin, airport, start, end)
+                flight_price, currency, total_stops = get_cheapest_flight_prices(origin, airport, start, end)
             except requests.exceptions.RequestException as e:
                 print(f"Price failed for {city} ({airport}): {e}", flush=True)
                 continue
             except Exception as e:
                 print(f"BUG in price logic for {city} ({airport}): {e}", flush=True)
                 continue
-
-            trip_score = total_score(avg_temp, flight_price)
             
-            if flight_price != "N/A":
-                result = {
-                    "city": city,
-                    "country": country,
-                    "airport": airport,
-                    "avg_temp_c": avg_temp["avg_temp_c"],
-                    "avg_precip_mm_per_day": avg_temp["avg_precip_mm_per_day"],
-                    "flight_price": flight_price,
-                    "score": trip_score
-                }
-                results.append(result)
+            if flight_price is None:
+                continue
+
+            trip_score = total_score(avg_temp, flight_price, total_stops)
+
+            result = {
+                "city": city,
+                "country": country,
+                "airport": airport,
+                "avg_temp_c": avg_temp["avg_temp_c"],
+                "avg_precip_mm_per_day": avg_temp["avg_precip_mm_per_day"],
+                "flight_price": flight_price,
+                "currency": currency,
+                "total_stops": total_stops,
+                "score": trip_score,
+            }
+            results.append(result)
 
             #print(f"{city}, {country} — Avg Temp: {avg_temp['avg_temp_c']}°C | Avg Precip: {avg_temp['avg_precip_mm_per_day']}mm/day | Flight Price: ${flight_price} | Score: {trip_score:.2f}")
 
     results.sort(key=lambda x: float(x.get('score', 0)), reverse=True)
-    print("Pos | City (Airport) — Score | Flight Price | Avg Temp | Avg Rainfall")
+    print("Pos | City (Airport) — Score | Flight Price | Stops | Avg Temp | Avg Rainfall")
     for i, row in enumerate(results[:top_n], start=1):
-        print(f"{i}. {row['city']} ({row['airport']}) — Score: {row['score']:.2f} | ${row['flight_price']} | {row['avg_temp_c']}°C | {row['avg_precip_mm_per_day']}mm/day")
+        print(f"{i}. {row['city']} ({row['airport']}) — Score: {row['score']:.2f} | {row['flight_price']} | Stops: {row['total_stops']} | {row['avg_temp_c']}°C | {row['avg_precip_mm_per_day']}mm/day")
 
 
 def valid_date(s):

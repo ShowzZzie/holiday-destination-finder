@@ -1,0 +1,4470 @@
+{
+  "data": [
+    {
+      "id": "1",
+      "instantTicketingRequired": false,
+      "isUpsellOffer": false,
+      "itineraries": [
+        {
+          "duration": "PT9H10M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-06T15:25:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T14:00:00",
+                "iataCode": "WRO"
+              },
+              "duration": "PT1H25M",
+              "id": "1",
+              "number": "4349",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32N"
+              },
+              "arrival": {
+                "at": "2026-01-06T20:00:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T18:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT2H",
+              "id": "2",
+              "number": "407",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32S"
+              },
+              "arrival": {
+                "at": "2026-01-06T23:10:00",
+                "iataCode": "CTA"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T21:50:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT1H20M",
+              "id": "3",
+              "number": "1735",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            }
+          ]
+        },
+        {
+          "duration": "PT7H25M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "223"
+              },
+              "arrival": {
+                "at": "2026-01-13T07:25:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T06:00:00",
+                "iataCode": "CTA"
+              },
+              "duration": "PT1H25M",
+              "id": "19",
+              "number": "1722",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "319"
+              },
+              "arrival": {
+                "at": "2026-01-13T10:40:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T08:35:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT2H5M",
+              "id": "20",
+              "number": "400",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-13T13:25:00",
+                "iataCode": "WRO"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T12:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT1H25M",
+              "id": "21",
+              "number": "4346",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            }
+          ]
+        }
+      ],
+      "lastTicketingDate": "2026-01-05",
+      "lastTicketingDateTime": "2026-01-05",
+      "nonHomogeneous": false,
+      "numberOfBookableSeats": 9,
+      "oneWay": false,
+      "price": {
+        "base": "109.00",
+        "currency": "EUR",
+        "fees": [
+          {
+            "amount": "0.00",
+            "type": "SUPPLIER"
+          },
+          {
+            "amount": "0.00",
+            "type": "TICKETING"
+          }
+        ],
+        "grandTotal": "258.86",
+        "total": "258.86"
+      },
+      "pricingOptions": {
+        "fareType": [
+          "PUBLISHED"
+        ],
+        "includedCheckedBagsOnly": true
+      },
+      "source": "GDS",
+      "travelerPricings": [
+        {
+          "fareDetailsBySegment": [
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "1"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "2"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "3"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "19"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "20"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "21"
+            }
+          ],
+          "fareOption": "STANDARD",
+          "price": {
+            "base": "109.00",
+            "currency": "EUR",
+            "total": "258.86"
+          },
+          "travelerId": "1",
+          "travelerType": "ADULT"
+        }
+      ],
+      "type": "flight-offer",
+      "validatingAirlineCodes": [
+        "AZ"
+      ]
+    },
+    {
+      "id": "2",
+      "instantTicketingRequired": false,
+      "isUpsellOffer": false,
+      "itineraries": [
+        {
+          "duration": "PT11H55M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-06T08:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T06:35:00",
+                "iataCode": "WRO"
+              },
+              "duration": "PT1H25M",
+              "id": "10",
+              "number": "4351",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "319"
+              },
+              "arrival": {
+                "at": "2026-01-06T13:50:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T11:50:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT2H",
+              "id": "11",
+              "number": "403",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32S"
+              },
+              "arrival": {
+                "at": "2026-01-06T18:30:00",
+                "iataCode": "CTA"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T17:15:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT1H15M",
+              "id": "12",
+              "number": "1733",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            }
+          ]
+        },
+        {
+          "duration": "PT7H25M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "223"
+              },
+              "arrival": {
+                "at": "2026-01-13T07:25:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T06:00:00",
+                "iataCode": "CTA"
+              },
+              "duration": "PT1H25M",
+              "id": "19",
+              "number": "1722",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "319"
+              },
+              "arrival": {
+                "at": "2026-01-13T10:40:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T08:35:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT2H5M",
+              "id": "20",
+              "number": "400",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-13T13:25:00",
+                "iataCode": "WRO"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T12:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT1H25M",
+              "id": "21",
+              "number": "4346",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            }
+          ]
+        }
+      ],
+      "lastTicketingDate": "2026-01-05",
+      "lastTicketingDateTime": "2026-01-05",
+      "nonHomogeneous": false,
+      "numberOfBookableSeats": 9,
+      "oneWay": false,
+      "price": {
+        "base": "109.00",
+        "currency": "EUR",
+        "fees": [
+          {
+            "amount": "0.00",
+            "type": "SUPPLIER"
+          },
+          {
+            "amount": "0.00",
+            "type": "TICKETING"
+          }
+        ],
+        "grandTotal": "258.86",
+        "total": "258.86"
+      },
+      "pricingOptions": {
+        "fareType": [
+          "PUBLISHED"
+        ],
+        "includedCheckedBagsOnly": true
+      },
+      "source": "GDS",
+      "travelerPricings": [
+        {
+          "fareDetailsBySegment": [
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "10"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "11"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "12"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "19"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "20"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "21"
+            }
+          ],
+          "fareOption": "STANDARD",
+          "price": {
+            "base": "109.00",
+            "currency": "EUR",
+            "total": "258.86"
+          },
+          "travelerId": "1",
+          "travelerType": "ADULT"
+        }
+      ],
+      "type": "flight-offer",
+      "validatingAirlineCodes": [
+        "AZ"
+      ]
+    },
+    {
+      "id": "3",
+      "instantTicketingRequired": false,
+      "isUpsellOffer": false,
+      "itineraries": [
+        {
+          "duration": "PT11H55M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-06T08:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T06:35:00",
+                "iataCode": "WRO"
+              },
+              "duration": "PT1H25M",
+              "id": "13",
+              "number": "4351",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32A"
+              },
+              "arrival": {
+                "at": "2026-01-06T12:40:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T10:50:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT1H50M",
+              "id": "14",
+              "number": "7275",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "LH"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32S"
+              },
+              "arrival": {
+                "at": "2026-01-06T18:30:00",
+                "iataCode": "CTA"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T17:15:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT1H15M",
+              "id": "15",
+              "number": "1733",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            }
+          ]
+        },
+        {
+          "duration": "PT7H25M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "223"
+              },
+              "arrival": {
+                "at": "2026-01-13T07:25:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T06:00:00",
+                "iataCode": "CTA"
+              },
+              "duration": "PT1H25M",
+              "id": "19",
+              "number": "1722",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "319"
+              },
+              "arrival": {
+                "at": "2026-01-13T10:40:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T08:35:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT2H5M",
+              "id": "20",
+              "number": "400",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-13T13:25:00",
+                "iataCode": "WRO"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T12:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT1H25M",
+              "id": "21",
+              "number": "4346",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            }
+          ]
+        }
+      ],
+      "lastTicketingDate": "2026-01-05",
+      "lastTicketingDateTime": "2026-01-05",
+      "nonHomogeneous": false,
+      "numberOfBookableSeats": 9,
+      "oneWay": false,
+      "price": {
+        "base": "109.00",
+        "currency": "EUR",
+        "fees": [
+          {
+            "amount": "0.00",
+            "type": "SUPPLIER"
+          },
+          {
+            "amount": "0.00",
+            "type": "TICKETING"
+          }
+        ],
+        "grandTotal": "258.86",
+        "total": "258.86"
+      },
+      "pricingOptions": {
+        "fareType": [
+          "PUBLISHED"
+        ],
+        "includedCheckedBagsOnly": true
+      },
+      "source": "GDS",
+      "travelerPricings": [
+        {
+          "fareDetailsBySegment": [
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "13"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "14"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "15"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "19"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "20"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "21"
+            }
+          ],
+          "fareOption": "STANDARD",
+          "price": {
+            "base": "109.00",
+            "currency": "EUR",
+            "total": "258.86"
+          },
+          "travelerId": "1",
+          "travelerType": "ADULT"
+        }
+      ],
+      "type": "flight-offer",
+      "validatingAirlineCodes": [
+        "AZ"
+      ]
+    },
+    {
+      "id": "4",
+      "instantTicketingRequired": false,
+      "isUpsellOffer": false,
+      "itineraries": [
+        {
+          "duration": "PT19H30M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-06T15:25:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T14:00:00",
+                "iataCode": "WRO"
+              },
+              "duration": "PT1H25M",
+              "id": "4",
+              "number": "4349",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32N"
+              },
+              "arrival": {
+                "at": "2026-01-06T20:00:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T18:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT2H",
+              "id": "5",
+              "number": "407",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32N"
+              },
+              "arrival": {
+                "at": "2026-01-07T09:30:00",
+                "iataCode": "CTA"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-07T08:15:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT1H15M",
+              "id": "6",
+              "number": "1709",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            }
+          ]
+        },
+        {
+          "duration": "PT7H25M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "223"
+              },
+              "arrival": {
+                "at": "2026-01-13T07:25:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T06:00:00",
+                "iataCode": "CTA"
+              },
+              "duration": "PT1H25M",
+              "id": "19",
+              "number": "1722",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "319"
+              },
+              "arrival": {
+                "at": "2026-01-13T10:40:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T08:35:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT2H5M",
+              "id": "20",
+              "number": "400",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-13T13:25:00",
+                "iataCode": "WRO"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T12:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT1H25M",
+              "id": "21",
+              "number": "4346",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            }
+          ]
+        }
+      ],
+      "lastTicketingDate": "2026-01-05",
+      "lastTicketingDateTime": "2026-01-05",
+      "nonHomogeneous": false,
+      "numberOfBookableSeats": 9,
+      "oneWay": false,
+      "price": {
+        "base": "109.00",
+        "currency": "EUR",
+        "fees": [
+          {
+            "amount": "0.00",
+            "type": "SUPPLIER"
+          },
+          {
+            "amount": "0.00",
+            "type": "TICKETING"
+          }
+        ],
+        "grandTotal": "258.86",
+        "total": "258.86"
+      },
+      "pricingOptions": {
+        "fareType": [
+          "PUBLISHED"
+        ],
+        "includedCheckedBagsOnly": true
+      },
+      "source": "GDS",
+      "travelerPricings": [
+        {
+          "fareDetailsBySegment": [
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "4"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "5"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "6"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "19"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "20"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "21"
+            }
+          ],
+          "fareOption": "STANDARD",
+          "price": {
+            "base": "109.00",
+            "currency": "EUR",
+            "total": "258.86"
+          },
+          "travelerId": "1",
+          "travelerType": "ADULT"
+        }
+      ],
+      "type": "flight-offer",
+      "validatingAirlineCodes": [
+        "AZ"
+      ]
+    },
+    {
+      "id": "5",
+      "instantTicketingRequired": false,
+      "isUpsellOffer": false,
+      "itineraries": [
+        {
+          "duration": "PT19H30M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-06T15:25:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T14:00:00",
+                "iataCode": "WRO"
+              },
+              "duration": "PT1H25M",
+              "id": "7",
+              "number": "4349",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32A"
+              },
+              "arrival": {
+                "at": "2026-01-06T22:50:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T21:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT1H50M",
+              "id": "8",
+              "number": "7279",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "LH"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32N"
+              },
+              "arrival": {
+                "at": "2026-01-07T09:30:00",
+                "iataCode": "CTA"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-07T08:15:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT1H15M",
+              "id": "9",
+              "number": "1709",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            }
+          ]
+        },
+        {
+          "duration": "PT7H25M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "223"
+              },
+              "arrival": {
+                "at": "2026-01-13T07:25:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T06:00:00",
+                "iataCode": "CTA"
+              },
+              "duration": "PT1H25M",
+              "id": "19",
+              "number": "1722",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "319"
+              },
+              "arrival": {
+                "at": "2026-01-13T10:40:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T08:35:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT2H5M",
+              "id": "20",
+              "number": "400",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-13T13:25:00",
+                "iataCode": "WRO"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T12:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT1H25M",
+              "id": "21",
+              "number": "4346",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            }
+          ]
+        }
+      ],
+      "lastTicketingDate": "2026-01-05",
+      "lastTicketingDateTime": "2026-01-05",
+      "nonHomogeneous": false,
+      "numberOfBookableSeats": 9,
+      "oneWay": false,
+      "price": {
+        "base": "109.00",
+        "currency": "EUR",
+        "fees": [
+          {
+            "amount": "0.00",
+            "type": "SUPPLIER"
+          },
+          {
+            "amount": "0.00",
+            "type": "TICKETING"
+          }
+        ],
+        "grandTotal": "258.86",
+        "total": "258.86"
+      },
+      "pricingOptions": {
+        "fareType": [
+          "PUBLISHED"
+        ],
+        "includedCheckedBagsOnly": true
+      },
+      "source": "GDS",
+      "travelerPricings": [
+        {
+          "fareDetailsBySegment": [
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "7"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "8"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "9"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "19"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "20"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "21"
+            }
+          ],
+          "fareOption": "STANDARD",
+          "price": {
+            "base": "109.00",
+            "currency": "EUR",
+            "total": "258.86"
+          },
+          "travelerId": "1",
+          "travelerType": "ADULT"
+        }
+      ],
+      "type": "flight-offer",
+      "validatingAirlineCodes": [
+        "AZ"
+      ]
+    },
+    {
+      "id": "6",
+      "instantTicketingRequired": false,
+      "isUpsellOffer": false,
+      "itineraries": [
+        {
+          "duration": "PT9H10M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-06T15:25:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T14:00:00",
+                "iataCode": "WRO"
+              },
+              "duration": "PT1H25M",
+              "id": "1",
+              "number": "4349",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32N"
+              },
+              "arrival": {
+                "at": "2026-01-06T20:00:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T18:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT2H",
+              "id": "2",
+              "number": "407",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32S"
+              },
+              "arrival": {
+                "at": "2026-01-06T23:10:00",
+                "iataCode": "CTA"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T21:50:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT1H20M",
+              "id": "3",
+              "number": "1735",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            }
+          ]
+        },
+        {
+          "duration": "PT16H55M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "223"
+              },
+              "arrival": {
+                "at": "2026-01-13T22:20:00",
+                "iataCode": "LIN"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T20:30:00",
+                "iataCode": "CTA"
+              },
+              "duration": "PT1H50M",
+              "id": "22",
+              "number": "1702",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "319"
+              },
+              "arrival": {
+                "at": "2026-01-14T07:25:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-14T06:10:00",
+                "iataCode": "LIN"
+              },
+              "duration": "PT1H15M",
+              "id": "23",
+              "number": "7308",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "LH"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-14T13:25:00",
+                "iataCode": "WRO"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-14T12:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT1H25M",
+              "id": "24",
+              "number": "4346",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            }
+          ]
+        }
+      ],
+      "lastTicketingDate": "2026-01-05",
+      "lastTicketingDateTime": "2026-01-05",
+      "nonHomogeneous": false,
+      "numberOfBookableSeats": 9,
+      "oneWay": false,
+      "price": {
+        "base": "109.00",
+        "currency": "EUR",
+        "fees": [
+          {
+            "amount": "0.00",
+            "type": "SUPPLIER"
+          },
+          {
+            "amount": "0.00",
+            "type": "TICKETING"
+          }
+        ],
+        "grandTotal": "268.90",
+        "total": "268.90"
+      },
+      "pricingOptions": {
+        "fareType": [
+          "PUBLISHED"
+        ],
+        "includedCheckedBagsOnly": true
+      },
+      "source": "GDS",
+      "travelerPricings": [
+        {
+          "fareDetailsBySegment": [
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "1"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "2"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "3"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "22"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "23"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "24"
+            }
+          ],
+          "fareOption": "STANDARD",
+          "price": {
+            "base": "109.00",
+            "currency": "EUR",
+            "total": "268.90"
+          },
+          "travelerId": "1",
+          "travelerType": "ADULT"
+        }
+      ],
+      "type": "flight-offer",
+      "validatingAirlineCodes": [
+        "AZ"
+      ]
+    },
+    {
+      "id": "7",
+      "instantTicketingRequired": false,
+      "isUpsellOffer": false,
+      "itineraries": [
+        {
+          "duration": "PT9H10M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-06T15:25:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T14:00:00",
+                "iataCode": "WRO"
+              },
+              "duration": "PT1H25M",
+              "id": "1",
+              "number": "4349",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32N"
+              },
+              "arrival": {
+                "at": "2026-01-06T20:00:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T18:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT2H",
+              "id": "2",
+              "number": "407",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32S"
+              },
+              "arrival": {
+                "at": "2026-01-06T23:10:00",
+                "iataCode": "CTA"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T21:50:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT1H20M",
+              "id": "3",
+              "number": "1735",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            }
+          ]
+        },
+        {
+          "duration": "PT18H15M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "223"
+              },
+              "arrival": {
+                "at": "2026-01-13T21:00:00",
+                "iataCode": "LIN"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T19:10:00",
+                "iataCode": "CTA"
+              },
+              "duration": "PT1H50M",
+              "id": "16",
+              "number": "1720",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "319"
+              },
+              "arrival": {
+                "at": "2026-01-14T07:25:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-14T06:10:00",
+                "iataCode": "LIN"
+              },
+              "duration": "PT1H15M",
+              "id": "17",
+              "number": "7308",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "LH"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-14T13:25:00",
+                "iataCode": "WRO"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-14T12:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT1H25M",
+              "id": "18",
+              "number": "4346",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            }
+          ]
+        }
+      ],
+      "lastTicketingDate": "2026-01-05",
+      "lastTicketingDateTime": "2026-01-05",
+      "nonHomogeneous": false,
+      "numberOfBookableSeats": 9,
+      "oneWay": false,
+      "price": {
+        "base": "109.00",
+        "currency": "EUR",
+        "fees": [
+          {
+            "amount": "0.00",
+            "type": "SUPPLIER"
+          },
+          {
+            "amount": "0.00",
+            "type": "TICKETING"
+          }
+        ],
+        "grandTotal": "268.90",
+        "total": "268.90"
+      },
+      "pricingOptions": {
+        "fareType": [
+          "PUBLISHED"
+        ],
+        "includedCheckedBagsOnly": true
+      },
+      "source": "GDS",
+      "travelerPricings": [
+        {
+          "fareDetailsBySegment": [
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "1"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "2"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "3"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "16"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "17"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "18"
+            }
+          ],
+          "fareOption": "STANDARD",
+          "price": {
+            "base": "109.00",
+            "currency": "EUR",
+            "total": "268.90"
+          },
+          "travelerId": "1",
+          "travelerType": "ADULT"
+        }
+      ],
+      "type": "flight-offer",
+      "validatingAirlineCodes": [
+        "AZ"
+      ]
+    },
+    {
+      "id": "8",
+      "instantTicketingRequired": false,
+      "isUpsellOffer": false,
+      "itineraries": [
+        {
+          "duration": "PT11H55M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-06T08:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T06:35:00",
+                "iataCode": "WRO"
+              },
+              "duration": "PT1H25M",
+              "id": "10",
+              "number": "4351",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "319"
+              },
+              "arrival": {
+                "at": "2026-01-06T13:50:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T11:50:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT2H",
+              "id": "11",
+              "number": "403",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32S"
+              },
+              "arrival": {
+                "at": "2026-01-06T18:30:00",
+                "iataCode": "CTA"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T17:15:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT1H15M",
+              "id": "12",
+              "number": "1733",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            }
+          ]
+        },
+        {
+          "duration": "PT16H55M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "223"
+              },
+              "arrival": {
+                "at": "2026-01-13T22:20:00",
+                "iataCode": "LIN"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T20:30:00",
+                "iataCode": "CTA"
+              },
+              "duration": "PT1H50M",
+              "id": "22",
+              "number": "1702",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "319"
+              },
+              "arrival": {
+                "at": "2026-01-14T07:25:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-14T06:10:00",
+                "iataCode": "LIN"
+              },
+              "duration": "PT1H15M",
+              "id": "23",
+              "number": "7308",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "LH"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-14T13:25:00",
+                "iataCode": "WRO"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-14T12:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT1H25M",
+              "id": "24",
+              "number": "4346",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            }
+          ]
+        }
+      ],
+      "lastTicketingDate": "2026-01-05",
+      "lastTicketingDateTime": "2026-01-05",
+      "nonHomogeneous": false,
+      "numberOfBookableSeats": 9,
+      "oneWay": false,
+      "price": {
+        "base": "109.00",
+        "currency": "EUR",
+        "fees": [
+          {
+            "amount": "0.00",
+            "type": "SUPPLIER"
+          },
+          {
+            "amount": "0.00",
+            "type": "TICKETING"
+          }
+        ],
+        "grandTotal": "268.90",
+        "total": "268.90"
+      },
+      "pricingOptions": {
+        "fareType": [
+          "PUBLISHED"
+        ],
+        "includedCheckedBagsOnly": true
+      },
+      "source": "GDS",
+      "travelerPricings": [
+        {
+          "fareDetailsBySegment": [
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "10"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "11"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "12"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "22"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "23"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "24"
+            }
+          ],
+          "fareOption": "STANDARD",
+          "price": {
+            "base": "109.00",
+            "currency": "EUR",
+            "total": "268.90"
+          },
+          "travelerId": "1",
+          "travelerType": "ADULT"
+        }
+      ],
+      "type": "flight-offer",
+      "validatingAirlineCodes": [
+        "AZ"
+      ]
+    },
+    {
+      "id": "9",
+      "instantTicketingRequired": false,
+      "isUpsellOffer": false,
+      "itineraries": [
+        {
+          "duration": "PT11H55M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-06T08:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T06:35:00",
+                "iataCode": "WRO"
+              },
+              "duration": "PT1H25M",
+              "id": "13",
+              "number": "4351",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32A"
+              },
+              "arrival": {
+                "at": "2026-01-06T12:40:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T10:50:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT1H50M",
+              "id": "14",
+              "number": "7275",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "LH"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32S"
+              },
+              "arrival": {
+                "at": "2026-01-06T18:30:00",
+                "iataCode": "CTA"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T17:15:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT1H15M",
+              "id": "15",
+              "number": "1733",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            }
+          ]
+        },
+        {
+          "duration": "PT16H55M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "223"
+              },
+              "arrival": {
+                "at": "2026-01-13T22:20:00",
+                "iataCode": "LIN"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T20:30:00",
+                "iataCode": "CTA"
+              },
+              "duration": "PT1H50M",
+              "id": "22",
+              "number": "1702",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "319"
+              },
+              "arrival": {
+                "at": "2026-01-14T07:25:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-14T06:10:00",
+                "iataCode": "LIN"
+              },
+              "duration": "PT1H15M",
+              "id": "23",
+              "number": "7308",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "LH"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-14T13:25:00",
+                "iataCode": "WRO"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-14T12:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT1H25M",
+              "id": "24",
+              "number": "4346",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            }
+          ]
+        }
+      ],
+      "lastTicketingDate": "2026-01-05",
+      "lastTicketingDateTime": "2026-01-05",
+      "nonHomogeneous": false,
+      "numberOfBookableSeats": 9,
+      "oneWay": false,
+      "price": {
+        "base": "109.00",
+        "currency": "EUR",
+        "fees": [
+          {
+            "amount": "0.00",
+            "type": "SUPPLIER"
+          },
+          {
+            "amount": "0.00",
+            "type": "TICKETING"
+          }
+        ],
+        "grandTotal": "268.90",
+        "total": "268.90"
+      },
+      "pricingOptions": {
+        "fareType": [
+          "PUBLISHED"
+        ],
+        "includedCheckedBagsOnly": true
+      },
+      "source": "GDS",
+      "travelerPricings": [
+        {
+          "fareDetailsBySegment": [
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "13"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "14"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "15"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "22"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "23"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "24"
+            }
+          ],
+          "fareOption": "STANDARD",
+          "price": {
+            "base": "109.00",
+            "currency": "EUR",
+            "total": "268.90"
+          },
+          "travelerId": "1",
+          "travelerType": "ADULT"
+        }
+      ],
+      "type": "flight-offer",
+      "validatingAirlineCodes": [
+        "AZ"
+      ]
+    },
+    {
+      "id": "10",
+      "instantTicketingRequired": false,
+      "isUpsellOffer": false,
+      "itineraries": [
+        {
+          "duration": "PT11H55M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-06T08:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T06:35:00",
+                "iataCode": "WRO"
+              },
+              "duration": "PT1H25M",
+              "id": "10",
+              "number": "4351",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "319"
+              },
+              "arrival": {
+                "at": "2026-01-06T13:50:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T11:50:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT2H",
+              "id": "11",
+              "number": "403",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "32S"
+              },
+              "arrival": {
+                "at": "2026-01-06T18:30:00",
+                "iataCode": "CTA"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-06T17:15:00",
+                "iataCode": "FCO",
+                "terminal": "1"
+              },
+              "duration": "PT1H15M",
+              "id": "12",
+              "number": "1733",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            }
+          ]
+        },
+        {
+          "duration": "PT18H15M",
+          "segments": [
+            {
+              "aircraft": {
+                "code": "223"
+              },
+              "arrival": {
+                "at": "2026-01-13T21:00:00",
+                "iataCode": "LIN"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-13T19:10:00",
+                "iataCode": "CTA"
+              },
+              "duration": "PT1H50M",
+              "id": "16",
+              "number": "1720",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "AZ"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "319"
+              },
+              "arrival": {
+                "at": "2026-01-14T07:25:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-14T06:10:00",
+                "iataCode": "LIN"
+              },
+              "duration": "PT1H15M",
+              "id": "17",
+              "number": "7308",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "LH"
+              }
+            },
+            {
+              "aircraft": {
+                "code": "E90"
+              },
+              "arrival": {
+                "at": "2026-01-14T13:25:00",
+                "iataCode": "WRO"
+              },
+              "blacklistedInEU": false,
+              "carrierCode": "AZ",
+              "departure": {
+                "at": "2026-01-14T12:00:00",
+                "iataCode": "FRA",
+                "terminal": "1"
+              },
+              "duration": "PT1H25M",
+              "id": "18",
+              "number": "4346",
+              "numberOfStops": 0,
+              "operating": {
+                "carrierCode": "EN"
+              }
+            }
+          ]
+        }
+      ],
+      "lastTicketingDate": "2026-01-05",
+      "lastTicketingDateTime": "2026-01-05",
+      "nonHomogeneous": false,
+      "numberOfBookableSeats": 9,
+      "oneWay": false,
+      "price": {
+        "base": "109.00",
+        "currency": "EUR",
+        "fees": [
+          {
+            "amount": "0.00",
+            "type": "SUPPLIER"
+          },
+          {
+            "amount": "0.00",
+            "type": "TICKETING"
+          }
+        ],
+        "grandTotal": "268.90",
+        "total": "268.90"
+      },
+      "pricingOptions": {
+        "fareType": [
+          "PUBLISHED"
+        ],
+        "includedCheckedBagsOnly": true
+      },
+      "source": "GDS",
+      "travelerPricings": [
+        {
+          "fareDetailsBySegment": [
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "10"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "11"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "12"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "16"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "17"
+            },
+            {
+              "amenities": [
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "PRE_RESERVED_SEAT",
+                  "description": "ADVANCE SEAT RESERVATION",
+                  "isChargeable": true
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "MEAL",
+                  "description": "SNACK",
+                  "isChargeable": false
+                },
+                {
+                  "amenityProvider": {
+                    "name": "BrandedFare"
+                  },
+                  "amenityType": "BRANDED_FARES",
+                  "description": "STANDARD SEAT RESERVATIONT",
+                  "isChargeable": true
+                }
+              ],
+              "brandedFare": "CLASSIC",
+              "brandedFareLabel": "CLASSIC",
+              "cabin": "ECONOMY",
+              "class": "K",
+              "fareBasis": "KETCLSE0",
+              "includedCabinBags": {
+                "quantity": 1
+              },
+              "includedCheckedBags": {
+                "quantity": 1
+              },
+              "segmentId": "18"
+            }
+          ],
+          "fareOption": "STANDARD",
+          "price": {
+            "base": "109.00",
+            "currency": "EUR",
+            "total": "268.90"
+          },
+          "travelerId": "1",
+          "travelerType": "ADULT"
+        }
+      ],
+      "type": "flight-offer",
+      "validatingAirlineCodes": [
+        "AZ"
+      ]
+    }
+  ],
+  "dictionaries": {
+    "aircraft": {
+      "223": "AIRBUS  A220-300",
+      "319": "AIRBUS A319",
+      "32A": "AIRBUS A320 (SHARKLETS)",
+      "32N": "AIRBUS A320NEO",
+      "32S": "AIRBUS INDUSTRIE A318/A319/A320/A321",
+      "E90": "EMBRAER 190"
+    },
+    "carriers": {
+      "AZ": "ITA AIRWAYS",
+      "EN": "AIR DOLOMITI",
+      "LH": "LUFTHANSA"
+    },
+    "currencies": {
+      "EUR": "EURO"
+    },
+    "locations": {
+      "CTA": {
+        "cityCode": "CTA",
+        "countryCode": "IT"
+      },
+      "FCO": {
+        "cityCode": "ROM",
+        "countryCode": "IT"
+      },
+      "FRA": {
+        "cityCode": "FRA",
+        "countryCode": "DE"
+      },
+      "LIN": {
+        "cityCode": "MIL",
+        "countryCode": "IT"
+      },
+      "WRO": {
+        "cityCode": "WRO",
+        "countryCode": "PL"
+      }
+    }
+  },
+  "meta": {
+    "count": 10,
+    "links": {
+      "self": "https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=WRO&destinationLocationCode=CTA&departureDate=2026-01-06&returnDate=2026-01-13&adults=1&max=10"
+    }
+  }
+}
