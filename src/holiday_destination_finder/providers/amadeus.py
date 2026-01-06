@@ -72,6 +72,78 @@ def get_amadeus_token():
 
 
 
+def extract_airlines_from_offer(offer: dict) -> str:
+    """
+    Returns a display string like: "W6 / FR" or "LH (validating) | LH / OS"
+    Works even if some fields are missing.
+    """
+    carriers = set()
+
+    for itin in offer.get("itineraries", []):
+        for seg in itin.get("segments", []):
+            # Common Amadeus keys
+            for key in ("carrierCode", "marketingCarrierCode", "operatingCarrierCode"):
+                code = seg.get(key)
+                if code:
+                    carriers.add(code)
+
+    validating = offer.get("validatingAirlineCodes") or []
+    validating_str = ""
+    if validating:
+        validating_str = f"{'/'.join(validating)} (validating) | "
+
+    if not carriers and validating:
+        return "/".join(validating)
+
+    if not carriers:
+        return "N/A"
+
+    return validating_str + " / ".join(sorted(carriers))
+
+
+
+
+
+def _get_with_retries(url, headers, params, timeout=15, max_retries=3, base_sleep=1.0):
+    """
+    Retries on 429 and some 5xx. Returns a Response or raises the last HTTPError.
+    """
+    last_exc = None
+
+    for attempt in range(max_retries + 1):
+        resp = _SESSION.get(url, headers=headers, params=params, timeout=timeout)
+
+        # Success
+        if resp.status_code < 400:
+            return resp
+
+        # Retry-worthy
+        if resp.status_code in (429, 500, 502, 503, 504):
+            # Respect Retry-After if present (Amadeus sometimes sends it)
+            retry_after = resp.headers.get("Retry-After")
+            if retry_after is not None:
+                try:
+                    sleep_s = float(retry_after)
+                except ValueError:
+                    sleep_s = base_sleep * (2 ** attempt)
+            else:
+                sleep_s = base_sleep * (2 ** attempt)
+
+            time.sleep(sleep_s)
+            last_exc = requests.HTTPError(f"{resp.status_code} {resp.reason}", response=resp)
+            continue
+
+        # Non-retry errors: break immediately
+        resp.raise_for_status()
+
+    # out of retries
+    if last_exc:
+        raise last_exc
+    resp.raise_for_status()
+
+
+
+
 
 def get_cheapest_offer_for_dates(origin, destination, from_date, to_date, trip_length):
     
@@ -87,20 +159,34 @@ def get_cheapest_offer_for_dates(origin, destination, from_date, to_date, trip_l
     }
 
     _CALLS["flight_offers"] += 1
-    resp = _SESSION.get(url, headers=headers, params=params, timeout=15)
-    resp.raise_for_status()
+    try:
+        resp = _get_with_retries(url, headers, params, timeout=15, max_retries=3, base_sleep=1.0)
+    except requests.HTTPError as e:
+        status = getattr(e.response, "status_code", None)
+
+        # If we still ended up rate-limited after retries, skip this date
+        if status == 429:
+            return None, None, None, None
+
+        # For other failures: re-raise (so you notice config problems)
+        raise
+
     data = resp.json()
+
 
     offers = data.get("data", [])
     if not offers:
-        return None, None, None  # ALWAYS 3 values
+        return None, None, None, None
+
 
     best = min(offers, key=lambda o: float(o["price"]["total"]))
+    airlines = extract_airlines_from_offer(best)
+
 
     itineraries = best.get("itineraries", [])
     if len(itineraries) < 2:
         # Defensive: should not happen for round-trip, but don't crash
-        return None, None, None
+        return None, None, None, None
 
     out_stops = len(itineraries[0]["segments"]) - 1
     ret_stops = len(itineraries[1]["segments"]) - 1
@@ -115,7 +201,7 @@ def get_cheapest_offer_for_dates(origin, destination, from_date, to_date, trip_l
         json.dump(data, f, indent=2, sort_keys=True, ensure_ascii=False)
     print("Saved to: ", filename)"""
 
-    return cheapest_price, cheapest_currency, total_stops
+    return cheapest_price, cheapest_currency, total_stops, airlines
 
     #return stub_prices.get(destination, "N/A")
 
@@ -126,7 +212,7 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
     Tries every valid departure date in [from_date, to_date] such that
     returnDate = departureDate + trip_length days is still within the window.
     Returns:
-      (best_price, best_currency, best_stops, best_departure_date, best_return_date)
+      (best_price, best_currency, best_stops, airlines, best_departure_date, best_return_date)
     or None if nothing found.
     """
     start_dt = date.fromisoformat(from_date)
@@ -139,20 +225,21 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
     if last_start < start_dt:
         return None
 
-    best = None  # tuple(price, currency, stops, dep, ret)
+    best = None  # tuple(price, currency, stops, airlines, dep, ret)
 
     d = start_dt
     while d <= last_start:
         dep = d.isoformat()
         ret = (d + timedelta(days=trip_length)).isoformat()
 
-        price, currency, stops = get_cheapest_offer_for_dates(
+        price, currency, stops, airlines = get_cheapest_offer_for_dates(
             origin, destination, dep, ret, trip_length
         )
 
         if price is not None:
             if best is None or price < best[0]:
-                best = (price, currency, stops, dep, ret)
+                best = (price, currency, stops, airlines, dep, ret)
+
 
         if sleep_s:
             time.sleep(sleep_s)

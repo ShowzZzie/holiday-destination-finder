@@ -64,7 +64,7 @@ def main(origin, start, end, trip_length, top_n: int = 10):
             if best is None:
                 continue
 
-            flight_price, currency, total_stops, best_dep, best_ret = best
+            flight_price, currency, total_stops, airlines, best_dep, best_ret = best
 
 
             result = {
@@ -76,6 +76,7 @@ def main(origin, start, end, trip_length, top_n: int = 10):
                 "flight_price": float(flight_price),   # ensure numeric
                 "currency": currency,
                 "total_stops": total_stops,
+                "airlines": airlines,
                 "best_departure": best_dep,
                 "best_return": best_ret,
                 "weather_data": avg_temp,              # keep full weather dict for scoring
@@ -116,6 +117,7 @@ def main(origin, start, end, trip_length, top_n: int = 10):
             f"Score: {row['score']:.2f} | "
             f"{row['currency']} {row['flight_price']} | "
             f"Stops: {row['total_stops']} | "
+            f"Airlines: {row['airlines']} | "
             f"{row['best_departure']} → {row['best_return']} | "
             f"{row['avg_temp_c']}°C | {row['avg_precip_mm_per_day']}mm/day"
         )
