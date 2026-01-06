@@ -1,24 +1,21 @@
-from holiday_destination_finder.providers.amadeus import stub_prices
-
-def total_score(weather_data, flight_price, total_stops):
-    if flight_price in (None, "N/A"):
-        return weather_score(weather_data) * 0.4
-    return price_score(flight_price) * 0.6 + weather_score(weather_data) * 0.4
+#from holiday_destination_finder.providers.amadeus import stub_prices
 
 
+def total_score(weather_data, flight_price, total_stops, min_price, max_price) -> float:
+    p = price_score(float(flight_price), min_price, max_price) * stop_penalty(total_stops)
+    w = weather_score(weather_data)
+    return 0.6 * p + 0.4 * w
 
-def price_score(price):
 
-    if price in (None, "N/A"):
-        return 0
-    
-    max_price = max(stub_prices.values())
-    min_price = min(stub_prices.values())
-    
+
+
+def price_score(price: float, min_price: float, max_price: float) -> float:
+    if price is None:
+        return 0.0
     if max_price == min_price:
-        return 100
-
-    return 100 * (max_price - price) / (max_price - min_price)
+        return 100.0
+    score = 100.0 * (max_price - price) / (max_price - min_price)
+    return max(0.0, min(100.0, score))
 
 
 def weather_score(weather):
@@ -35,3 +32,9 @@ def weather_score(weather):
     rain_score = max(0, 100 - (rain * 15))
 
     return 0.6 * temp_score + 0.4 * rain_score
+
+
+
+def stop_penalty(total_stops: int) -> float:
+    total_stops = max(0, int(total_stops))
+    return max(0.5, 1.0 - 0.1 * total_stops)
