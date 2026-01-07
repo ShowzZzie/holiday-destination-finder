@@ -53,23 +53,45 @@ def main(origin, start, end, trip_length, top_n: int = 10):
                 print(f"BUG in weather logic for {city} ({airport}): {e}", flush=True)
                 continue
 
+            # ==========================
+            # PRICE LOGIC (CHANGED)
+            # ==========================
+            # BEFORE: Amadeus + Ryanair were in ONE try/except. If Ryanair throws an exception
+            # (not "returns empty", but actually THROWS), you would continue() and skip the destination,
+            # even if Amadeus already found a valid offer.
+            #
+            # NOW: Amadeus and Ryanair are isolated. Ryanair failure can no longer kill Amadeus results.
+            best_a = None
+            best_r = None
+
+            # 1) Amadeus (primary)
             try:
                 best_a = get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
-                best_r = find_cheapest_offer(get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length))
-                if best_a is None and best_r is None:
-                    continue
-                elif best_a is None:
-                    best = best_r
-                elif best_r is None:
-                    best = best_a
-                else:
-                    best = best_a if best_a[0] < best_r[0] else best_r
             except requests.exceptions.RequestException as e:
-                print(f"Price failed for {city} ({airport}): {e}", flush=True)
-                continue
+                print(f"[amadeus] Price failed for {city} ({airport}): {e}", flush=True)
+                best_a = None
             except Exception as e:
-                print(f"BUG in price logic for {city} ({airport}): {e}", flush=True)
+                print(f"[amadeus] BUG in price logic for {city} ({airport}): {e}", flush=True)
+                best_a = None
+
+            # 2) Ryanair (optional add-on; must never discard Amadeus results)
+            try:
+                trips = get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length)
+                best_r = find_cheapest_offer(trips)
+            except Exception as e:
+                # Important: do NOT continue; just mark Ryanair as unavailable for this destination
+                print(f"[ryanair] Price failed for {city} ({airport}): {e}", flush=True)
+                best_r = None
+
+            # Combine results
+            if best_a is None and best_r is None:
                 continue
+            elif best_a is None:
+                best = best_r
+            elif best_r is None:
+                best = best_a
+            else: # MVP returns the same currency
+                best = best_a if best_a[0] < best_r[0] else best_r
 
             if best is None:
                 continue

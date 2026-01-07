@@ -214,7 +214,14 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
     Returns:
       (best_price, best_currency, best_stops, airlines, best_departure_date, best_return_date)
     or None if nothing found.
+
+    Optimizations:
+    - Optionally run per-date probes concurrently controlled by env var `AMADEUS_WORKERS`.
+    - Keep per-date and overall progress prints so behavior is observable.
+    - Preserve full brute-force date checking (no skipping).
     """
+    import concurrent.futures
+
     start_dt = date.fromisoformat(from_date)
     end_dt = date.fromisoformat(to_date)
 
@@ -225,28 +232,78 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
     if last_start < start_dt:
         return None
 
-    best = None  # tuple(price, currency, stops, airlines, dep, ret)
-
+    # Build list of (dep, ret) date pairs
+    dates = []
     d = start_dt
-    print(f"[amadeus] probing {origin}->{destination} from {from_date} to {to_date} (trip_length={trip_length})")
     while d <= last_start:
         dep = d.isoformat()
         ret = (d + timedelta(days=trip_length)).isoformat()
-
-        price, currency, stops, airlines = get_cheapest_offer_for_dates(
-            origin, destination, dep, ret, trip_length
-        )
-
-        print(f"[amadeus] checked dep={dep} ret={ret} -> price={'None' if price is None else price}")
-        if price is not None:
-            if best is None or price < best[0]:
-                best = (price, currency, stops, airlines, dep, ret)
-
-
-        if sleep_s:
-            time.sleep(sleep_s)
-
+        dates.append((dep, ret))
         d += timedelta(days=1)
+
+    n_dates = len(dates)
+    if n_dates == 0:
+        return None
+
+    # Determine worker count from env var, default to min(4, n_dates)
+    try:
+        workers_env = int(os.getenv("AMADEUS_WORKERS", "0"))
+    except Exception:
+        workers_env = 0
+    workers = workers_env if workers_env > 0 else min(31, n_dates)
+
+    print(f"[amadeus] probing {origin}->{destination} for {n_dates} dates (workers={workers})")
+
+    best = None  # tuple(price, currency, stops, airlines, dep, ret)
+
+    if workers <= 1:
+        # Sequential (original behavior, preserves sleep_s semantics)
+        for dep, ret in dates:
+            start_call = time.time()
+            price, currency, stops, airlines = get_cheapest_offer_for_dates(
+                origin, destination, dep, ret, trip_length
+            )
+            elapsed = time.time() - start_call
+            print(f"[amadeus] checked dep={dep} ret={ret} -> price={'None' if price is None else price} time={elapsed:.2f}s")
+
+            if price is not None:
+                if best is None or price < best[0]:
+                    best = (price, currency, stops, airlines, dep, ret)
+
+            if sleep_s:
+                time.sleep(sleep_s)
+    else:
+        # Concurrent probing with limited workers
+        def _probe(dep_ret):
+            dep, ret = dep_ret
+            try:
+                start_call = time.time()
+                price, currency, stops, airlines = get_cheapest_offer_for_dates(
+                    origin, destination, dep, ret, trip_length
+                )
+                elapsed = time.time() - start_call
+                return dep, ret, (price, currency, stops, airlines) if price is not None else None, elapsed, None
+            except Exception as e:
+                return dep, ret, None, 0.0, e
+
+        # Submit all tasks but only run up to `workers` concurrently
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
+            futures = {ex.submit(_probe, dr): dr for dr in dates}
+
+            for fut in concurrent.futures.as_completed(futures):
+                dep, ret, res, elapsed, err = fut.result()
+                if err:
+                    print(f"[amadeus] dep={dep} ret={ret} -> ERROR: {err}")
+                    continue
+
+                print(f"[amadeus] checked dep={dep} ret={ret} -> price={'None' if res is None else res[0]} time={elapsed:.2f}s")
+
+                if res is not None:
+                    price, currency, stops, airlines = res
+                    if best is None or price < best[0]:
+                        best = (price, currency, stops, airlines, dep, ret)
+
+        # NOTE: when running concurrently we don't apply sleep_s between individual calls
 
     print(f"[amadeus] finished window search | best={best}")
     return best

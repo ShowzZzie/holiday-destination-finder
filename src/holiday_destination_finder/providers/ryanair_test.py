@@ -13,18 +13,37 @@ def get_cheapest_ryanair_offer_for_dates(origin: str, destination: str, from_dat
     flights = []
 
     while from_date_dt <= to_date_dt - timedelta(days=trip_length):
-        temp_flights = api.get_cheapest_return_flights(
-            source_airport = origin,
-            date_from = from_date_dt,
-            date_to = from_date_dt, #to_date_dt - timedelta(days=trip_length),
-            return_date_from = from_date_dt + timedelta(days=trip_length),
-            return_date_to = from_date_dt + timedelta(days=trip_length),#to_date_dt,
-            destination_airport = destination
-        )
+        # ==========================
+        # CHANGED: protect each API call
+        # ==========================
+        # If Ryanair doesn't support the route/airport/date, the library may THROW (not return []).
+        # We catch that here so one failure doesn't kill the entire destination.
+        try:
+            temp_flights = api.get_cheapest_return_flights(
+                source_airport = origin,
+                date_from = from_date_dt,
+                date_to = from_date_dt,  # keep per-day probing like you had
+                return_date_from = from_date_dt + timedelta(days=trip_length),
+                return_date_to = from_date_dt + timedelta(days=trip_length),
+                destination_airport = destination
+            )
+        except Exception as e:
+            print(f"[ryanair] checked {from_date_dt.date().isoformat()} -> ERROR: {e}")
+            temp_flights = None
+
         print(f"[ryanair] checked {from_date_dt.date().isoformat()} -> found={bool(temp_flights)}")
-        # only keep meaningful results
+
+        # ==========================
+        # CHANGED: flatten results (avoid list-of-lists)
+        # ==========================
+        # Your old code did flights.append(temp_flights) which creates nested lists.
+        # Then find_cheapest_offer() only inspected flight[0] for each day, ignoring other options.
         if temp_flights:
-            flights.append(temp_flights)
+            # temp_flights is typically a list of Flight objects
+            if isinstance(temp_flights, list):
+                flights.extend(temp_flights)
+            else:
+                flights.append(temp_flights)
 
         from_date_dt += timedelta(days=1)
 
@@ -38,28 +57,22 @@ def find_cheapest_offer(trip_list):
     
     if trip_list is None or not trip_list:
         return None
-    
-    cheapest_price = 0.0
-    cheapest_price_index = 0
-    found_any = False
 
-    for i, flight in enumerate(trip_list):
-        
-        if flight == None or len(flight) == 0 or not flight:
-            continue
+    # ==========================
+    # CHANGED: trip_list is now a flat list of Flight objects
+    # ==========================
+    # So we can just min() by totalPrice.
+    def _price(f):
+        # totalPrice might be numeric already; cast to float defensively
+        return float(f.totalPrice)
 
-        if flight[0].totalPrice < cheapest_price or cheapest_price == 0.0:
-            cheapest_price = flight[0].totalPrice
-            cheapest_price_index = i
-            found_any = True
+    cheapest = min(trip_list, key=_price)
+    cheapest_price = float(cheapest.totalPrice)
 
-    if not found_any:
-        print("[ryanair] find_cheapest_offer: no valid flights found")
-        return None
+    dep = cheapest.outbound.departureTime.date().isoformat()
+    ret = cheapest.inbound.departureTime.date().isoformat()
 
-    dep = trip_list[cheapest_price_index][0].outbound.departureTime.date().isoformat()
-    ret = trip_list[cheapest_price_index][0].inbound.departureTime.date().isoformat()
-    print(f"[ryanair] find_cheapest_offer: cheapest={cheapest_price} idx={cheapest_price_index} dep={dep} ret={ret}")
+    print(f"[ryanair] find_cheapest_offer: cheapest={cheapest_price} dep={dep} ret={ret}")
     return (round(cheapest_price, 2), "EUR", 0, "Ryanair", dep, ret)
 
 # what this must return finally:
@@ -76,4 +89,3 @@ if __name__ == "__main__":
     r_to_date = "2026-12-31"
     func_call = get_cheapest_ryanair_offer_for_dates(origin, destination, from_date, to_date, trip_length)
     print(find_cheapest_offer(func_call))
-
