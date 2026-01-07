@@ -1,6 +1,7 @@
 from holiday_destination_finder.providers.openmeteo import get_weather_data
 from holiday_destination_finder.providers.amadeus import get_best_offer_in_window, amadeus_call_stats
 from holiday_destination_finder.scoring import total_score
+from holiday_destination_finder.providers.ryanair_test import find_cheapest_offer, get_cheapest_ryanair_offer_for_dates
 from pathlib import Path
 import csv, argparse, datetime, requests, threading, time
 
@@ -53,7 +54,16 @@ def main(origin, start, end, trip_length, top_n: int = 10):
                 continue
 
             try:
-                best = get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
+                best_a = get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
+                best_r = find_cheapest_offer(get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length))
+                if best_a is None and best_r is None:
+                    continue
+                elif best_a is None:
+                    best = best_r
+                elif best_r is None:
+                    best = best_a
+                else:
+                    best = best_a if best_a[0] < best_r[0] else best_r
             except requests.exceptions.RequestException as e:
                 print(f"Price failed for {city} ({airport}): {e}", flush=True)
                 continue

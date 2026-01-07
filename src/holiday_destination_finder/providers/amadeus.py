@@ -228,6 +228,7 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
     best = None  # tuple(price, currency, stops, airlines, dep, ret)
 
     d = start_dt
+    print(f"[amadeus] probing {origin}->{destination} from {from_date} to {to_date} (trip_length={trip_length})")
     while d <= last_start:
         dep = d.isoformat()
         ret = (d + timedelta(days=trip_length)).isoformat()
@@ -236,6 +237,7 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
             origin, destination, dep, ret, trip_length
         )
 
+        print(f"[amadeus] checked dep={dep} ret={ret} -> price={'None' if price is None else price}")
         if price is not None:
             if best is None or price < best[0]:
                 best = (price, currency, stops, airlines, dep, ret)
@@ -246,6 +248,7 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
 
         d += timedelta(days=1)
 
+    print(f"[amadeus] finished window search | best={best}")
     return best
 
 
