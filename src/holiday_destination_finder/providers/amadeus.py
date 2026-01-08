@@ -33,8 +33,8 @@ def amadeus_call_stats():
     return dict(_CALLS)
 
 def get_amadeus_token():
-    api_key = os.getenv("AMADEUS_API_KEY")
-    api_secret = os.getenv("AMADEUS_API_SECRET")
+    api_key = os.getenv("AMADEUS_API_KEY_V2TEST")
+    api_secret = os.getenv("AMADEUS_API_SECRET_V2TEST")
 
     if not api_key or not api_secret:
         raise RuntimeError("Missing AMADEUS_API_KEY or AMADEUS_API_SECRET")
@@ -166,6 +166,7 @@ def get_cheapest_offer_for_dates(origin, destination, from_date, to_date, trip_l
 
         # If we still ended up rate-limited after retries, skip this date
         if status == 429:
+            print("[amadeus] ERROR 429 - QUOTA EXCEEDED most likely")
             return None, None, None, None
 
         # For other failures: re-raise (so you notice config problems)
@@ -250,7 +251,7 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
         workers_env = int(os.getenv("AMADEUS_WORKERS", "0"))
     except Exception:
         workers_env = 0
-    workers = workers_env if workers_env > 0 else min(31, n_dates)
+    workers = workers_env if workers_env > 0 else min(4, n_dates)
 
     print(f"[amadeus] probing {origin}->{destination} for {n_dates} dates (workers={workers})")
 
