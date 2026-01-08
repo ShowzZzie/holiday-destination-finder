@@ -29,8 +29,15 @@ _CALLS = {
     "flight_offers": 0
 }
 
+_ERRORS_429 = {
+    "429_err_det": 0
+}
+
 def amadeus_call_stats():
     return dict(_CALLS)
+
+def amadeus_429_err_count():
+    return _ERRORS_429["429_err_det"]
 
 def get_amadeus_token():
     api_key = os.getenv("AMADEUS_API_KEY_V2TEST")
@@ -166,6 +173,7 @@ def get_cheapest_offer_for_dates(origin, destination, from_date, to_date, trip_l
 
         # If we still ended up rate-limited after retries, skip this date
         if status == 429:
+            _ERRORS_429["429_err_det"] += 1
             return None, None, None, None
 
         # For other failures: re-raise (so you notice config problems)

@@ -14,3 +14,4 @@ src/holiday_destination_finder.egg-info/top_level.txt
 src/holiday_destination_finder/providers/__init__.py
 src/holiday_destination_finder/providers/amadeus.py
 src/holiday_destination_finder/providers/openmeteo.py
+src/holiday_destination_finder/providers/ryanair_test.py

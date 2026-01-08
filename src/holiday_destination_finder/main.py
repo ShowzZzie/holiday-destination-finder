@@ -1,5 +1,5 @@
 from holiday_destination_finder.providers.openmeteo import get_weather_data
-from holiday_destination_finder.providers.amadeus import get_best_offer_in_window, amadeus_call_stats
+from holiday_destination_finder.providers.amadeus import get_best_offer_in_window, amadeus_call_stats, amadeus_429_err_count
 from holiday_destination_finder.scoring import total_score
 from holiday_destination_finder.providers.ryanair_test import find_cheapest_offer, get_cheapest_ryanair_offer_for_dates
 from pathlib import Path
@@ -135,6 +135,7 @@ def main(origin, start, end, trip_length, top_n: int = 10):
     stop_event.set()
 
     print("Amadeus calls:", amadeus_call_stats())
+    print("Amadeus 429 Errors:", amadeus_429_err_count())
 
 
 
