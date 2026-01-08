@@ -33,8 +33,8 @@ def amadeus_call_stats():
     return dict(_CALLS)
 
 def get_amadeus_token():
-    api_key = os.getenv("AMADEUS_API_KEY")
-    api_secret = os.getenv("AMADEUS_API_SECRET")
+    api_key = os.getenv("AMADEUS_API_KEY_V2TEST")
+    api_secret = os.getenv("AMADEUS_API_SECRET_V2TEST")
 
     if not api_key or not api_secret:
         raise RuntimeError("Missing AMADEUS_API_KEY or AMADEUS_API_SECRET")
