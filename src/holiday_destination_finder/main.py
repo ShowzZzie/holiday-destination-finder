@@ -46,7 +46,7 @@ def main(origin, start, end, trip_length, top_n: int = 10):
             print(f"[processing] {idx} / {total} destinations processed", flush=True)
             
             try:
-                avg_temp = get_weather_data(float(lat), float(lon), start, end)
+                weather_info = get_weather_data(float(lat), float(lon), start, end)
             except requests.exceptions.RequestException as e:
                 print(f"Weather failed for {city} ({airport}): {e}", flush=True)
                 continue
@@ -76,7 +76,7 @@ def main(origin, start, end, trip_length, top_n: int = 10):
             except Exception as e:
                 print(f"[wizzair] failed for {city} ({airport}): {e}", flush=True)
 
-            candidates = [x for x in (best_a, best_r, best_w) if x is not None]
+            candidates = [trip for trip in offers_a + offers_r + offers_w if trip is not None]
             if not candidates:
                 continue
 
@@ -93,15 +93,15 @@ def main(origin, start, end, trip_length, top_n: int = 10):
                 "city": city,
                 "country": country,
                 "airport": airport,
-                "avg_temp_c": avg_temp["avg_temp_c"],
-                "avg_precip_mm_per_day": avg_temp["avg_precip_mm_per_day"],
+                "avg_temp_c": weather_info["avg_temp_c"],
+                "avg_precip_mm_per_day": weather_info["avg_precip_mm_per_day"],
                 "flight_price": float(flight_price),   # ensure numeric
                 "currency": currency,
                 "total_stops": total_stops,
                 "airlines": airlines,
                 "best_departure": best_dep,
                 "best_return": best_ret,
-                "weather_data": avg_temp,              # keep full weather dict for scoring
+                "weather_data": weather_info,              # keep full weather dict for scoring
             }
 
 

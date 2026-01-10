@@ -69,6 +69,10 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
 
     while from_date_dt <= to_date_dt - timedelta(days=trip_length):
         _CALLS["date_checks"] += 1
+        dep = from_date_dt.date().isoformat()
+        ret = (from_date_dt + timedelta(days=trip_length)).date().isoformat()
+
+        print(f"[wizzair] checked dep={dep} ret={ret}", flush=True)
         
         try:
             flight_segments_t = [
