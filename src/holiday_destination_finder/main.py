@@ -2,6 +2,7 @@ from holiday_destination_finder.providers.openmeteo import get_weather_data
 from holiday_destination_finder.providers.amadeus import get_best_offer_in_window, amadeus_call_stats, amadeus_429_err_count
 from holiday_destination_finder.scoring import total_score
 from holiday_destination_finder.providers.ryanair_test import find_cheapest_offer, get_cheapest_ryanair_offer_for_dates
+from holiday_destination_finder.providers.wizzair_test import find_cheapest_trip, wizzair_call_stats
 from pathlib import Path
 import csv, argparse, datetime, requests, threading, time
 
@@ -26,6 +27,8 @@ def main(origin, start, end, trip_length, top_n: int = 10):
     if trip_length is None:
         trip_length = 7
 
+    origin = origin.strip().upper()
+    airport = airport.strip().upper()
     results = []
     CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities.csv"
 
@@ -53,23 +56,34 @@ def main(origin, start, end, trip_length, top_n: int = 10):
                 print(f"BUG in weather logic for {city} ({airport}): {e}", flush=True)
                 continue
 
+            best_a = best_r = best_w = None
+
+            # Amadeus
             try:
                 best_a = get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
-                best_r = find_cheapest_offer(get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length))
-                if best_a is None and best_r is None:
-                    continue
-                elif best_a is None:
-                    best = best_r
-                elif best_r is None:
-                    best = best_a
-                else:
-                    best = best_a if best_a[0] < best_r[0] else best_r
-            except requests.exceptions.RequestException as e:
-                print(f"Price failed for {city} ({airport}): {e}", flush=True)
-                continue
             except Exception as e:
-                print(f"BUG in price logic for {city} ({airport}): {e}", flush=True)
+                print(f"[amadeus] failed for {city} ({airport}): {e}", flush=True)
+
+            # Ryanair
+            try:
+                best_r = find_cheapest_offer(
+                    get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length)
+                )
+            except Exception as e:
+                print(f"[ryanair] failed for {city} ({airport}): {e}", flush=True)
+
+            # Wizzair
+            try:
+                best_w = find_cheapest_trip(origin, airport, start, end, trip_length)
+            except Exception as e:
+                print(f"[wizzair] failed for {city} ({airport}): {e}", flush=True)
+
+            candidates = [x for x in (best_a, best_r, best_w) if x is not None]
+            if not candidates:
                 continue
+
+            # pick cheapest; tie-break by fewer stops
+            best = min(candidates, key=lambda t: (float(t[0]), int(t[2] or 0)))
 
             if best is None:
                 continue

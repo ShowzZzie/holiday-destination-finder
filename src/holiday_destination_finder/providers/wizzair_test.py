@@ -10,122 +10,138 @@ from fli.models import (
     FlightSegment,
     TripType
 )
-from fli.search import SearchFlights, SearchDates
+from fli.search import SearchFlights
 from currency_converter import CurrencyConverter
+import time
 
 c = CurrencyConverter()
 
-origin = "WRO"
-destination = "MAD"
-from_date = "2026-05-01"
-from_date_dt = datetime.strptime(from_date, "%Y-%m-%d") 
-to_date = "2026-05-31"
-to_date_dt = datetime.strptime(to_date, "%Y-%m-%d")
-trip_length = 7
+_CALLS = {
+    "searches": 0,
+    "date_checks": 0
+}
 
-found_flights = []
+_ERRORS = {
+    "429_err_det": 0,
+    "other_err_det": 0
+}
 
-while from_date_dt <= to_date_dt - timedelta(days=trip_length):
-    flight_segments_t = [
-        FlightSegment(
-            departure_airport = [[Airport[origin], 0]],
-            arrival_airport = [[Airport[destination], 0]],
-            travel_date = datetime.strftime(from_date_dt, "%Y-%m-%d")
-        ),
-        FlightSegment(
-            departure_airport = [[Airport[destination], 0]],
-            arrival_airport = [[Airport[origin], 0]],
-            travel_date = datetime.strftime(from_date_dt + timedelta(days=trip_length), "%Y-%m-%d")
+def wizzair_call_stats():
+    return {"calls": dict(_CALLS), "errors": dict(_ERRORS)}
+
+def _status_code(e: Exception):
+    resp = getattr(e, "response", None)
+    return getattr(resp, "status_code", None)
+
+def _search_with_retries(filters, max_retries=5, base_sleep=1.0):
+    last_was_429 = False
+    for att in range(max_retries + 1):
+        _CALLS["searches"] += 1
+        try:
+            return SearchFlights().search(filters)
+        except Exception as e:
+            code = _status_code(e)
+            msg = str(e).lower()
+            if code == 429 or "429" in msg or "too many requests" in msg:
+                last_was_429 = True
+                time.sleep(base_sleep * (2 ** att))
+                continue
+            _ERRORS["other_err_det"] += 1
+            return None
+
+    if last_was_429:
+        _ERRORS["429_err_det"] += 1
+    return None
+
+
+def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: str, trip_length: int):
+    found_flights = []
+    origin = origin.upper()
+    destination = destination.upper()
+
+    if trip_length <= 0:
+        raise ValueError("trip_length must be > 0")
+
+    from_date_dt = datetime.strptime(from_date, "%Y-%m-%d")
+    to_date_dt = datetime.strptime(to_date, "%Y-%m-%d")
+    if to_date_dt < from_date_dt:
+        raise ValueError("to_date must be >= from_date")
+
+    while from_date_dt <= to_date_dt - timedelta(days=trip_length):
+        _CALLS["date_checks"] += 1
+        
+        try:
+            flight_segments_t = [
+                FlightSegment(
+                    departure_airport = [[Airport[origin], 0]],
+                    arrival_airport = [[Airport[destination], 0]],
+                    travel_date = datetime.strftime(from_date_dt, "%Y-%m-%d")
+                ),
+                FlightSegment(
+                    departure_airport = [[Airport[destination], 0]],
+                    arrival_airport = [[Airport[origin], 0]],
+                    travel_date = datetime.strftime(from_date_dt + timedelta(days=trip_length), "%Y-%m-%d")
+                )
+            ]
+        except KeyError:
+            # wrong IATA code backup
+            _ERRORS["other_err_det"] += 1
+            return None
+
+        filters = FlightSearchFilters(
+            passenger_info = PassengerInfo(adults=1),
+            flight_segments = flight_segments_t,
+            seat_type = SeatType.ECONOMY,
+            stops = MaxStops.NON_STOP,
+            sort_by = SortBy.CHEAPEST,
+            airlines = [Airline["W6"]],
+            trip_type = TripType.ROUND_TRIP
         )
-    ]
 
-    filters = FlightSearchFilters(
-        passenger_info = PassengerInfo(adults=1),
-        flight_segments = flight_segments_t,
-        seat_type = SeatType.ECONOMY,
-        stops = MaxStops.NON_STOP,
-        sort_by = SortBy.CHEAPEST,
-        airlines = [Airline["W6"]],
-        trip_type = TripType.ROUND_TRIP
-    )
+        found_flights.append(_search_with_retries(filters))
 
-    search = SearchFlights().search(filters)
-    found_flights.append(search)
+        from_date_dt += timedelta(days=1)
+        
 
-    from_date_dt += timedelta(days=1)
-    
+    best = None # best = (price, currency, stops, airlines, dep, ret)
 
-best = None # best = (price, currency, stops, airlines, dep, ret)
+    for helper in found_flights:
+        if not helper:
+            continue
 
-for smth in found_flights:
-    if not smth:
-        continue
-
-    outbound, return_flight = smth[0]
-    #print(outbound.legs[0])
-
-    if outbound.price == return_flight.price:
-        trip_price = c.convert(outbound.price, "USD", "EUR")
-        if best == None or best[0] > trip_price:
-            best = (round(trip_price,2), "EUR", 0, "Wizz Air", outbound.legs[0].departure_datetime.date().isoformat(), return_flight.legs[0].departure_datetime.date().isoformat())
-    else:
-        continue
-
-print(best)
-    
-"""
-    print("OUTBOUND:", outbound)
-    print("RETURN:", return_flight)
-    for helper in smth[0]:
-        flight = helper.legs[0]
-        print("FROM:", flight.departure_airport.name)
-        print("TO:", flight.arrival_airport.name)
-        print(f"{flight.departure_datetime} — {flight.arrival_datetime}")
-        print(f"PRICE: €{round(c.convert(helper.price, "USD", "EUR"), 2)}")
-        print("===")
-    print("------------------")
-    """
+        try:
+            outbound, return_flight = helper[0]
+        except (IndexError, ValueError, TypeError):
+            _ERRORS["other_err_det"] += 1
+            continue
 
 
 
+        trip_usd = outbound.price if outbound.price == return_flight.price else (outbound.price + return_flight.price)
+        try:
+            trip_price = c.convert(trip_usd, "USD", "EUR")
+        except Exception:
+            _ERRORS["other_err_det"] += 1
+            continue
 
-"""
-# Create search filters
-filters = FlightSearchFilters(
-    passenger_info=PassengerInfo(adults=1),
-    flight_segments=[
-        FlightSegment(
-            departure_airport=[[Airport[origin], 0]],
-            arrival_airport=[[Airport[destination], 0]],
-            travel_date=(from_date),
-        )
-    ],
-    seat_type=SeatType.ECONOMY,
-    stops=MaxStops.NON_STOP,
-    sort_by=SortBy.CHEAPEST,
-    airlines=[Airline["W6"]]
-)
+        if best is None or best[0] > trip_price:
+            try:
+                dep = outbound.legs[0].departure_datetime.date().isoformat()
+                ret = return_flight.legs[0].departure_datetime.date().isoformat()
+            except Exception:
+                _ERRORS["other_err_det"] += 1
+                continue
+            best = (round(trip_price, 2), "EUR", 0, "Wizz Air", dep, ret)
 
-print(Airline["W6"].value)
+    return best
 
-# Search flights
-flights = SearchFlights().search(filters)
 
-for a in flights:
-    print(a)
-"""
-
- 
-
-"""
-# Process results
-for flight in flights:
-    print(f"💰 Price: ${flight.price}")
-    print(f"⏱️ Duration: {flight.duration} minutes")
-    print(f"✈️ Stops: {flight.stops}")
-
-    for leg in flight.legs:
-        print(f"\n🛫 Flight: {leg.airline.value} {leg.flight_number}")
-        print(f"📍 From: {leg.departure_airport.value} at {leg.departure_datetime}")
-        print(f"📍 To: {leg.arrival_airport.value} at {leg.arrival_datetime}")
-"""
+if __name__ == "__main__":
+    origin = "WRO"
+    destination = "MAD"
+    from_date = "2026-05-01"
+    to_date = "2026-05-31"
+    trip_length = 7
+    print(find_cheapest_trip(origin, destination, from_date, to_date, trip_length))
+    print(_CALLS)
+    print(_ERRORS)
