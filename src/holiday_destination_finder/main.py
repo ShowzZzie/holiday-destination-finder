@@ -54,17 +54,24 @@ def main(origin, start, end, trip_length, top_n: int = 10):
                 print(f"BUG in weather logic for {city} ({airport}): {e}", flush=True)
                 continue
 
-            best_a = best_r = best_w = None
+            #best_a = best_r = best_w = None
+            offers_a = []
+            offers_r = []
+            offers_w = []
 
             # Amadeus
             try:
-                best_a = get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
+                #best_a = get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
+                offers_a = get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
             except Exception as e:
                 print(f"[amadeus] failed for {city} ({airport}): {e}", flush=True)
 
             # Ryanair
             try:
-                best_r = find_cheapest_offer(
+                #best_r = find_cheapest_offer(
+                #    get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length)
+                #)
+                offers_r = find_cheapest_offer(
                     get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length)
                 )
             except Exception as e:
@@ -72,7 +79,8 @@ def main(origin, start, end, trip_length, top_n: int = 10):
 
             # Wizzair
             try:
-                best_w = find_cheapest_trip(origin, airport, start, end, trip_length)
+                #best_w = find_cheapest_trip(origin, airport, start, end, trip_length)
+                offers_w = find_cheapest_trip(origin, airport, start, end, trip_length)
             except Exception as e:
                 print(f"[wizzair] failed for {city} ({airport}): {e}", flush=True)
 

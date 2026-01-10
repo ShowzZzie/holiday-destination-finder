@@ -43,6 +43,8 @@ def find_cheapest_offer(trip_list):
     cheapest_price_index = 0
     found_any = False
 
+    all_possible_flights = []
+
     for i, flight in enumerate(trip_list):
         
         if flight == None or len(flight) == 0 or not flight:
@@ -53,6 +55,8 @@ def find_cheapest_offer(trip_list):
             cheapest_price_index = i
             found_any = True
 
+        all_possible_flights.append((flight[0].totalPrice, currency, 0, "Ryanair", dep, ret))
+
     if not found_any:
         print("[ryanair] find_cheapest_offer: no valid flights found")
         return None
@@ -60,7 +64,8 @@ def find_cheapest_offer(trip_list):
     dep = trip_list[cheapest_price_index][0].outbound.departureTime.date().isoformat()
     ret = trip_list[cheapest_price_index][0].inbound.departureTime.date().isoformat()
     print(f"[ryanair] find_cheapest_offer: cheapest={cheapest_price} idx={cheapest_price_index} dep={dep} ret={ret}")
-    return (round(cheapest_price, 2), "EUR", 0, "Ryanair", dep, ret)
+    #return (round(cheapest_price, 2), "EUR", 0, "Ryanair", dep, ret)
+    return all_possible_flights
 
 # what this must return finally:
 # (price, currency, stops, airlines, dep, ret)

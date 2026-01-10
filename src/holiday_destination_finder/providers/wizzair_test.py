@@ -137,7 +137,8 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
                 continue
             best = (round(trip_price, 2), "EUR", 0, "Wizz Air", dep, ret)
 
-    return best
+    #return best
+    return found_flights
 
 
 if __name__ == "__main__":
