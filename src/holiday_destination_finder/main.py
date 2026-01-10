@@ -27,8 +27,6 @@ def main(origin, start, end, trip_length, top_n: int = 10):
     if trip_length is None:
         trip_length = 7
 
-    origin = origin.strip().upper()
-    airport = airport.strip().upper()
     results = []
     CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities.csv"
 
