@@ -225,8 +225,6 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
 
         d += timedelta(days=1)
 
-    #print(f"[amadeus] finished window search | best={best}")
-    #return best
     print(f"[amadeus] finished window search | offers_found: {len(offers)}")
     return offers
 
