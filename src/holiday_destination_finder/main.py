@@ -84,18 +84,32 @@ def main(origin, start, end, trip_length, top_n: int = 10):
             except Exception as e:
                 print(f"[wizzair] failed for {city} ({airport}): {e}", flush=True)
 
-            candidates = [trip for trip in offers_a + offers_r + offers_w if trip is not None]
+            offers_a = offers_a or []
+            offers_r = offers_r or []
+            offers_w = offers_w or []
+
+            candidates = [trip for trip in (offers_a + offers_r + offers_w) if trip is not None]
             if not candidates:
                 continue
 
-            # pick cheapest; tie-break by fewer stops
-            best = min(candidates, key=lambda t: (float(t[0]), int(t[2] or 0)))
+            price_list = [float(tup[0]) for tup in candidates]
+            min_price = min(price_list)
+            max_price = max(price_list)
+
+            best = None
+            best_score = None
+
+            for tup in candidates:
+                price, curr, stops, airline, dep, ret = tup
+                score = total_score(weather_info, price, stops, min_price, max_price)
+                if best_score is None or score > best_score:
+                    best_score = score
+                    best = tup
 
             if best is None:
                 continue
 
             flight_price, currency, total_stops, airlines, best_dep, best_ret = best
-
 
             result = {
                 "city": city,
@@ -137,9 +151,8 @@ def main(origin, start, end, trip_length, top_n: int = 10):
         )
         r.pop("weather_data", None)
 
-
-
     results.sort(key=lambda x: float(x.get('score', 0)), reverse=True)
+
     print("Pos | City (Airport) — Score | Flight Price | Stops | Avg Temp | Avg Rainfall")
     for i, row in enumerate(results[:top_n], start=1):
         print(
