@@ -2,9 +2,9 @@ from holiday_destination_finder.providers.openmeteo import get_weather_data
 from holiday_destination_finder.providers.amadeus import get_best_offer_in_window, amadeus_call_stats, amadeus_429_err_count
 from holiday_destination_finder.scoring import total_score
 from holiday_destination_finder.providers.ryanair_test import find_cheapest_offer, get_cheapest_ryanair_offer_for_dates
-from holiday_destination_finder.providers.wizzair_test import find_cheapest_trip, wizzair_call_stats
+from holiday_destination_finder.providers.wizzair_test import find_cheapest_trip
 from pathlib import Path
-import csv, argparse, datetime, requests, threading, time
+import csv, argparse, datetime, threading, time
 
 
 def main(origin, start, end, trip_length, top_n: int = 10):
@@ -28,6 +28,7 @@ def main(origin, start, end, trip_length, top_n: int = 10):
         trip_length = 7
 
     results = []
+    weather_cache = {}
     CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities.csv"
 
     with open(CITIES_CSV, newline="", encoding="utf-8") as fh:
@@ -40,37 +41,25 @@ def main(origin, start, end, trip_length, top_n: int = 10):
             city = row['city']
             country = row['country']
             lat = row['lat']
+            lat_f = float(lat)
             lon = row['lon']
+            lon_f = float(lon)
             airport = row['airport']
             print(f"[processing] CURRENT DESTINATION: {city} ({airport})", flush=True)
             print(f"[processing] {idx} / {total} destinations processed", flush=True)
-            
-            try:
-                weather_info = get_weather_data(float(lat), float(lon), start, end)
-            except requests.exceptions.RequestException as e:
-                print(f"Weather failed for {city} ({airport}): {e}", flush=True)
-                continue
-            except Exception as e:
-                print(f"BUG in weather logic for {city} ({airport}): {e}", flush=True)
-                continue
 
-            #best_a = best_r = best_w = None
             offers_a = []
             offers_r = []
             offers_w = []
 
             # Amadeus
             try:
-                #best_a = get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
                 offers_a = get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
             except Exception as e:
                 print(f"[amadeus] failed for {city} ({airport}): {e}", flush=True)
 
             # Ryanair
             try:
-                #best_r = find_cheapest_offer(
-                #    get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length)
-                #)
                 offers_r = find_cheapest_offer(
                     get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length)
                 )
@@ -79,7 +68,6 @@ def main(origin, start, end, trip_length, top_n: int = 10):
 
             # Wizzair
             try:
-                #best_w = find_cheapest_trip(origin, airport, start, end, trip_length)
                 offers_w = find_cheapest_trip(origin, airport, start, end, trip_length)
             except Exception as e:
                 print(f"[wizzair] failed for {city} ({airport}): {e}", flush=True)
@@ -96,40 +84,45 @@ def main(origin, start, end, trip_length, top_n: int = 10):
             loc_min_price = min(price_list)
             loc_max_price = max(price_list)
 
-            best = None
+            best_tup = None
             best_score = None
+            best_weather = None
 
-            for tup in candidates:
-                price, curr, stops, airline, dep, ret = tup
+            for price, curr, stops, airline, dep, ret in candidates:
+                cache_key = (lat_f, lon_f, dep, ret)
+                if cache_key not in weather_cache:
+                    try:
+                        weather_cache[cache_key] = get_weather_data(lat_f, lon_f, dep, ret)
+                    except Exception:
+                        print("[BUG] Failed to retrieve weather data for:", cache_key)
+                        continue
+                weather_info = weather_cache[cache_key]
+
                 score = total_score(weather_info, price, stops, loc_min_price, loc_max_price)
+                
                 if best_score is None or score > best_score:
                     best_score = score
-                    best = tup
+                    best_tup = (price, curr, stops, airline, dep, ret)
+                    best_weather = weather_info
 
-            if best is None:
-                continue
+            if best_tup:
+                flight_price, currency, total_stops, airlines, best_dep, best_ret = best_tup
 
-            flight_price, currency, total_stops, airlines, best_dep, best_ret = best
-
-            result = {
-                "city": city,
-                "country": country,
-                "airport": airport,
-                "avg_temp_c": weather_info["avg_temp_c"],
-                "avg_precip_mm_per_day": weather_info["avg_precip_mm_per_day"],
-                "flight_price": float(flight_price),   # ensure numeric
-                "currency": currency,
-                "total_stops": total_stops,
-                "airlines": airlines,
-                "best_departure": best_dep,
-                "best_return": best_ret,
-                "weather_data": weather_info,              # keep full weather dict for scoring
-            }
-
-
-            results.append(result)
-
-            #print(f"{city}, {country} — Avg Temp: {avg_temp['avg_temp_c']}°C | Avg Precip: {avg_temp['avg_precip_mm_per_day']}mm/day | Flight Price: ${flight_price} | Score: {trip_score:.2f}")
+                result = {
+                    "city": city,
+                    "country": country,
+                    "airport": airport,
+                    "avg_temp_c": best_weather["avg_temp_c"],
+                    "avg_precip_mm_per_day": best_weather["avg_precip_mm_per_day"],
+                    "flight_price": float(flight_price),   # ensure numeric
+                    "currency": currency,
+                    "total_stops": total_stops,
+                    "airlines": airlines,
+                    "best_departure": best_dep,
+                    "best_return": best_ret,
+                    "weather_data": best_weather,              # keep full weather dict for scoring
+                }
+                results.append(result)
 
     prices = [r["flight_price"] for r in results if r.get("flight_price") is not None]
     if not prices:
