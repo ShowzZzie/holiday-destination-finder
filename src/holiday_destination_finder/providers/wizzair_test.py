@@ -56,6 +56,7 @@ def _search_with_retries(filters, max_retries=5, base_sleep=1.0):
 
 def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: str, trip_length: int):
     found_flights = []
+    trips = []
     origin = origin.upper()
     destination = destination.upper()
 
@@ -107,7 +108,7 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
         from_date_dt += timedelta(days=1)
         
 
-    best = None # best = (price, currency, stops, airlines, dep, ret)
+   #  best = None # best = (price, currency, stops, airlines, dep, ret)
 
     for helper in found_flights:
         if not helper:
@@ -119,8 +120,6 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
             _ERRORS["other_err_det"] += 1
             continue
 
-
-
         trip_usd = outbound.price if outbound.price == return_flight.price else (outbound.price + return_flight.price)
         try:
             trip_price = c.convert(trip_usd, "USD", "EUR")
@@ -128,17 +127,17 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
             _ERRORS["other_err_det"] += 1
             continue
 
-        if best is None or best[0] > trip_price:
-            try:
-                dep = outbound.legs[0].departure_datetime.date().isoformat()
-                ret = return_flight.legs[0].departure_datetime.date().isoformat()
-            except Exception:
-                _ERRORS["other_err_det"] += 1
-                continue
-            best = (round(trip_price, 2), "EUR", 0, "Wizz Air", dep, ret)
+        try:
+            dep = outbound.legs[0].departure_datetime.date().isoformat()
+            ret = return_flight.legs[0].departure_datetime.date().isoformat()
+            trips.append((round(trip_price, 2), "EUR", 0, "WizzAir", dep, ret))
+        except Exception:
+            _ERRORS["other_err_det"] += 1
+            continue
 
     #return best
-    return found_flights
+    #return found_flights
+    return trips
 
 
 if __name__ == "__main__":
