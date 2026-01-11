@@ -7,7 +7,9 @@ from pathlib import Path
 import csv, argparse, datetime, threading, time
 
 
-def main(origin, start, end, trip_length, top_n: int = 10):
+def main(origin, start, end, trip_length, providers, top_n: int = 10):
+    
+    providers = [p.strip().lower() for p in (providers or [])]
 
     stop_event = threading.Event()
     timer_thread = threading.Thread(
@@ -53,24 +55,27 @@ def main(origin, start, end, trip_length, top_n: int = 10):
             offers_w = []
 
             # Amadeus
-            try:
-                offers_a = get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
-            except Exception as e:
-                print(f"[amadeus] failed for {city} ({airport}): {e}", flush=True)
+            if "amadeus" in providers:
+                try:
+                    offers_a = get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
+                except Exception as e:
+                    print(f"[amadeus] failed for {city} ({airport}): {e}", flush=True)
 
             # Ryanair
-            try:
-                offers_r = find_cheapest_offer(
-                    get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length)
-                )
-            except Exception as e:
-                print(f"[ryanair] failed for {city} ({airport}): {e}", flush=True)
+            if "ryanair" in providers:
+                try:
+                    offers_r = find_cheapest_offer(
+                        get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length)
+                    )
+                except Exception as e:
+                    print(f"[ryanair] failed for {city} ({airport}): {e}", flush=True)
 
             # Wizzair
-            try:
-                offers_w = find_cheapest_trip(origin, airport, start, end, trip_length)
-            except Exception as e:
-                print(f"[wizzair] failed for {city} ({airport}): {e}", flush=True)
+            if "wizzair" in providers:
+                try:
+                    offers_w = find_cheapest_trip(origin, airport, start, end, trip_length)
+                except Exception as e:
+                    print(f"[wizzair] failed for {city} ({airport}): {e}", flush=True)
 
             offers_a = offers_a or []
             offers_r = offers_r or []
@@ -128,7 +133,9 @@ def main(origin, start, end, trip_length, top_n: int = 10):
     if not prices:
         stop_event.set()
         print("No destinations with flight prices found.")
-        print("Amadeus calls:", amadeus_call_stats())
+        if "amadeus" in providers:
+            print("Amadeus calls:", amadeus_call_stats())
+            print("Amadeus 429 Errors:", amadeus_429_err_count())
         return
 
     min_price = min(prices)
@@ -160,8 +167,9 @@ def main(origin, start, end, trip_length, top_n: int = 10):
 
     stop_event.set()
 
-    print("Amadeus calls:", amadeus_call_stats())
-    print("Amadeus 429 Errors:", amadeus_429_err_count())
+    if "amadeus" in providers:
+        print("Amadeus calls:", amadeus_call_stats())
+        print("Amadeus 429 Errors:", amadeus_429_err_count())
 
 
 
@@ -179,7 +187,8 @@ def parse_args():
     p.add_argument("--start", "-s", type=valid_date, help="Start date (YYYY-MM-DD)")
     p.add_argument("--end", "-e", type=valid_date, help="End date (YYYY-MM-DD)")
     p.add_argument("--trip_length", "-tl", type=int, help="Length of the trip in days")
-    p.add_argument("--top_n", "-t", type=int, default = 10, help="Number of top destinations to display")
+    p.add_argument("--top_n", "-t", type=int, default=10, help="Number of top destinations to display")
+    p.add_argument("--providers", "-p", type=str, default="ryanair,wizzair", help="Comma-separated list of providers to use: amadeus,ryanair,wizzair")
     return p.parse_args()
 
 def start_elapsed_timer(stop_event: threading.Event):
@@ -191,4 +200,5 @@ def start_elapsed_timer(stop_event: threading.Event):
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.origin, args.start, args.end, args.trip_length, args.top_n)
+    providers = [p.strip().lower() for p in (args.providers or "").split(",") if p.strip()]
+    main(args.origin, args.start, args.end, args.trip_length, providers, args.top_n)
