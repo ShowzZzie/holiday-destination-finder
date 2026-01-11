@@ -39,6 +39,47 @@ def find_cheapest_offer(trip_list):
     if trip_list is None or not trip_list:
         return None
     
+    all_possible_flights = []
+
+    for flight in trip_list:
+        if not flight:
+            continue
+        try:
+            price = round(float(flight[0].totalPrice), 2)
+            dep = flight[0].outbound.departureTime.date().isoformat()
+            ret = flight[0].inbound.departureTime.date().isoformat()
+            all_possible_flights.append((price, _currency, 0, "Ryanair", dep, ret))
+        except Exception:
+            continue
+
+    return all_possible_flights
+    
+    #print("LEN:", len(all_possible_flights))
+    #print(all_possible_flights)
+
+
+# what this must return finally:
+# (price, currency, stops, airlines, dep, ret)
+# print(find_cheapest_offer(func_call))
+
+if __name__ == "__main__":
+    origin = "WRO"              # MUST BE AN ARGUEMENT
+    destination = "AGP"         # MUST BE AN ARGUEMENT
+    from_date = "2026-05-01"    # MUST BE AN ARGUEMENT
+    to_date = "2026-05-31"      # MUST BE AN ARGUEMENT
+    trip_length = 7             # MUST BE AN ARGUEMENT
+    r_from_date = "2026-02-01"
+    r_to_date = "2026-12-31"
+    func_call = get_cheapest_ryanair_offer_for_dates(origin, destination, from_date, to_date, trip_length)
+    print(find_cheapest_offer(func_call))
+
+
+"""
+def find_cheapest_offer(trip_list):
+    
+    if trip_list is None or not trip_list:
+        return None
+    
     cheapest_price = 0.0
     cheapest_price_index = 0
     found_any = False
@@ -68,19 +109,4 @@ def find_cheapest_offer(trip_list):
     print(f"[ryanair] find_cheapest_offer: cheapest={cheapest_price} idx={cheapest_price_index} dep={dep} ret={ret}")
     #return (round(cheapest_price, 2), "EUR", 0, "Ryanair", dep, ret)
     return all_possible_flights
-
-# what this must return finally:
-# (price, currency, stops, airlines, dep, ret)
-# print(find_cheapest_offer(func_call))
-
-if __name__ == "__main__":
-    origin = "WRO"              # MUST BE AN ARGUEMENT
-    destination = "AGP"         # MUST BE AN ARGUEMENT
-    from_date = "2026-05-01"    # MUST BE AN ARGUEMENT
-    to_date = "2026-05-31"      # MUST BE AN ARGUEMENT
-    trip_length = 7             # MUST BE AN ARGUEMENT
-    r_from_date = "2026-02-01"
-    r_to_date = "2026-12-31"
-    func_call = get_cheapest_ryanair_offer_for_dates(origin, destination, from_date, to_date, trip_length)
-    print(find_cheapest_offer(func_call))
-
+"""
