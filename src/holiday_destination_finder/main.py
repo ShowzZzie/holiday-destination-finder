@@ -93,15 +93,15 @@ def main(origin, start, end, trip_length, top_n: int = 10):
                 continue
 
             price_list = [float(tup[0]) for tup in candidates]
-            min_price = min(price_list)
-            max_price = max(price_list)
+            loc_min_price = min(price_list)
+            loc_max_price = max(price_list)
 
             best = None
             best_score = None
 
             for tup in candidates:
                 price, curr, stops, airline, dep, ret = tup
-                score = total_score(weather_info, price, stops, min_price, max_price)
+                score = total_score(weather_info, price, stops, loc_min_price, loc_max_price)
                 if best_score is None or score > best_score:
                     best_score = score
                     best = tup

@@ -1,22 +1,6 @@
 import os, requests, json, time
 from datetime import date, timedelta
 
-stub_prices = {
-        "LIS": 150,
-        "MAD": 100,
-        "VLC": 300,
-        "AGP": 222,
-        "FCO": 69,
-        "CTA": 111,
-        "JTR": 265,
-        "DBV": 420,
-        "BKK": 600,
-        "DMK": 675,
-        "FLR": 30,
-        "JFK": 512,
-        "LGA": 700,
-    }
-
 _SESSION = requests.Session()
 
 _TOKEN_CACHE = {
@@ -203,15 +187,7 @@ def get_cheapest_offer_for_dates(origin, destination, from_date, to_date, trip_l
     cheapest_price = float(best["price"]["total"])
     cheapest_currency = best["price"]["currency"]
 
-
-    """filename = f"amadeus_flight_offers_{origin}_{destination}_{from_date}_{to_date}.json"
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, sort_keys=True, ensure_ascii=False)
-    print("Saved to: ", filename)"""
-
     return cheapest_price, cheapest_currency, total_stops, airlines
-
-    #return stub_prices.get(destination, "N/A")
 
 
 
@@ -242,9 +218,6 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
             offers.append((price, currency, stops, airlines, dep, ret))
 
         print(f"[amadeus] checked dep={dep} ret={ret} -> price={'None' if price is None else price}")
-        #if price is not None:
-        #    if best is None or price < best[0]:
-        #        best = (price, currency, stops, airlines, dep, ret)
 
 
         if sleep_s:
