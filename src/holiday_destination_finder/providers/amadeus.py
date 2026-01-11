@@ -245,12 +245,13 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
         price, currency, stops, airlines = get_cheapest_offer_for_dates(
             origin, destination, dep, ret, trip_length
         )
-        offers.append(get_cheapest_offer_for_dates(origin, destination, dep, ret, trip_length))
+        if price is not None:
+            offers.append((price, currency, stops, airlines, dep, ret))
 
         print(f"[amadeus] checked dep={dep} ret={ret} -> price={'None' if price is None else price}")
-        if price is not None:
-            if best is None or price < best[0]:
-                best = (price, currency, stops, airlines, dep, ret)
+        #if price is not None:
+        #    if best is None or price < best[0]:
+        #        best = (price, currency, stops, airlines, dep, ret)
 
 
         if sleep_s:
@@ -258,12 +259,13 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
 
         d += timedelta(days=1)
 
-    print(f"[amadeus] finished window search | best={best}")
+    #print(f"[amadeus] finished window search | best={best}")
     #return best
+    print(f"[amadeus] finished window search | offers_found: {len(offers)}")
     return offers
 
 
 
 if __name__ == "__main__":
     print(get_amadeus_token())
-    print(get_best_offer_in_window("WRO", "CTA", "2026-01-16", "2026-01-23", 7))
+    print(get_best_offer_in_window("WRO", "CTA", "2026-01-16", "2026-01-27", 7))

@@ -55,7 +55,9 @@ def find_cheapest_offer(trip_list):
             cheapest_price_index = i
             found_any = True
 
-        all_possible_flights.append((flight[0].totalPrice, currency, 0, "Ryanair", dep, ret))
+        dep = trip_list[cheapest_price_index][0].outbound.departureTime.date().isoformat()
+        ret = trip_list[cheapest_price_index][0].inbound.departureTime.date().isoformat()
+        all_possible_flights.append((flight[0].totalPrice, _currency, 0, "Ryanair", dep, ret))
 
     if not found_any:
         print("[ryanair] find_cheapest_offer: no valid flights found")
