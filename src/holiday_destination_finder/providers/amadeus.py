@@ -216,13 +216,6 @@ def get_cheapest_offer_for_dates(origin, destination, from_date, to_date, trip_l
 
 
 def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_date: str, trip_length: int, sleep_s: float = 0.0):
-    """
-    Tries every valid departure date in [from_date, to_date] such that
-    returnDate = departureDate + trip_length days is still within the window.
-    Returns:
-      (best_price, best_currency, best_stops, airlines, best_departure_date, best_return_date)
-    or None if nothing found.
-    """
     start_dt = date.fromisoformat(from_date)
     end_dt = date.fromisoformat(to_date)
 

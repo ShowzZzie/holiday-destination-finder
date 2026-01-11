@@ -130,7 +130,7 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
         try:
             dep = outbound.legs[0].departure_datetime.date().isoformat()
             ret = return_flight.legs[0].departure_datetime.date().isoformat()
-            trips.append((round(trip_price, 2), "EUR", 0, "WizzAir", dep, ret))
+            trips.append((round(trip_price, 2), "EUR", 0, "Wizz Air", dep, ret))
         except Exception:
             _ERRORS["other_err_det"] += 1
             continue
