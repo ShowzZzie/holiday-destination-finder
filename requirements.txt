@@ -2,7 +2,7 @@ fastapi[standard]
 uvicorn
 requests
 ryanair-py
-fli
+flights
 CurrencyConverter
 Authlib
 
