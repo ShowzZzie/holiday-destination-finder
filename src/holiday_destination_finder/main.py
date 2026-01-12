@@ -19,6 +19,47 @@ def main(origin, start, end, trip_length, providers, top_n: int = 10):
     )
     timer_thread.start()
 
+    results = search_destinations(origin, start, end, trip_length, providers, top_n)
+
+    if not results:
+        stop_event.set()
+        print("No destinations with flight prices found.")
+        if "amadeus" in providers:
+            print("Amadeus calls:", amadeus_call_stats())
+            print("Amadeus 429 Errors:", amadeus_429_err_count())
+        return
+
+    print("Pos | City (Airport) — Score | Flight Price | Stops | Avg Temp | Avg Rainfall")
+    for i, row in enumerate(results[:top_n], start=1):
+        print(
+            f"{i}. {row['city']} ({row['airport']}) — "
+            f"Score: {row['score']:.2f} | "
+            f"{row['currency']} {row['flight_price']} | "
+            f"Stops: {row['total_stops']} | "
+            f"Airlines: {row['airlines']} | "
+            f"{row['best_departure']} → {row['best_return']} | "
+            f"{row['avg_temp_c']}°C | {row['avg_precip_mm_per_day']}mm/day"
+        )
+
+    stop_event.set()
+
+    if "amadeus" in providers:
+        print("Amadeus calls:", amadeus_call_stats())
+        print("Amadeus 429 Errors:", amadeus_429_err_count())
+
+
+
+
+def search_destinations(
+    origin: str | None,
+    start: str | None,
+    end: str | None,
+    trip_length: int | None,
+    providers: list[str] | None,
+    top_n: int = 10
+) -> list[dict]:
+    
+    providers = [p.strip().lower() for p in (providers or [])]
 
     if origin is None:
         origin = "WRO"
@@ -29,8 +70,8 @@ def main(origin, start, end, trip_length, providers, top_n: int = 10):
     if trip_length is None:
         trip_length = 7
 
-    results = []
-    weather_cache = {}
+    results: list[dict] = []
+    weather_cache: dict[tuple[float, float, str, str], dict] = {}
     CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities.csv"
 
     with open(CITIES_CSV, newline="", encoding="utf-8") as fh:
@@ -42,17 +83,15 @@ def main(origin, start, end, trip_length, providers, top_n: int = 10):
         for idx, row in enumerate(reader, start=1):
             city = row['city']
             country = row['country']
-            lat = row['lat']
-            lat_f = float(lat)
-            lon = row['lon']
-            lon_f = float(lon)
+            lat_f = float(row["lat"])
+            lon_f = float(row["lon"])
             airport = row['airport']
             print(f"[processing] CURRENT DESTINATION: {city} ({airport})", flush=True)
             print(f"[processing] {idx} / {total} destinations processed", flush=True)
 
-            offers_a = []
-            offers_r = []
-            offers_w = []
+            offers_a: list[tuple] = []
+            offers_r: list[tuple] = []
+            offers_w: list[tuple] = []
 
             # Amadeus
             if "amadeus" in providers:
@@ -110,7 +149,7 @@ def main(origin, start, end, trip_length, providers, top_n: int = 10):
                     best_tup = (price, curr, stops, airline, dep, ret)
                     best_weather = weather_info
 
-            if best_tup:
+            if best_tup and best_weather is not None:
                 flight_price, currency, total_stops, airlines, best_dep, best_ret = best_tup
 
                 result = {
@@ -131,12 +170,7 @@ def main(origin, start, end, trip_length, providers, top_n: int = 10):
 
     prices = [r["flight_price"] for r in results if r.get("flight_price") is not None]
     if not prices:
-        stop_event.set()
-        print("No destinations with flight prices found.")
-        if "amadeus" in providers:
-            print("Amadeus calls:", amadeus_call_stats())
-            print("Amadeus 429 Errors:", amadeus_429_err_count())
-        return
+        return []
 
     min_price = min(prices)
     max_price = max(prices)
@@ -152,24 +186,7 @@ def main(origin, start, end, trip_length, providers, top_n: int = 10):
         r.pop("weather_data", None)
 
     results.sort(key=lambda x: float(x.get('score', 0)), reverse=True)
-
-    print("Pos | City (Airport) — Score | Flight Price | Stops | Avg Temp | Avg Rainfall")
-    for i, row in enumerate(results[:top_n], start=1):
-        print(
-            f"{i}. {row['city']} ({row['airport']}) — "
-            f"Score: {row['score']:.2f} | "
-            f"{row['currency']} {row['flight_price']} | "
-            f"Stops: {row['total_stops']} | "
-            f"Airlines: {row['airlines']} | "
-            f"{row['best_departure']} → {row['best_return']} | "
-            f"{row['avg_temp_c']}°C | {row['avg_precip_mm_per_day']}mm/day"
-        )
-
-    stop_event.set()
-
-    if "amadeus" in providers:
-        print("Amadeus calls:", amadeus_call_stats())
-        print("Amadeus 429 Errors:", amadeus_429_err_count())
+    return results[:top_n]
 
 
 

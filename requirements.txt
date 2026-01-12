@@ -1,4 +1,9 @@
+fastapi[standard]
+uvicorn
 requests
-pandas
-python-dateutil
-streamlit
+ryanair-py
+fli
+CurrencyConverter
+Authlib
+
+-e .
