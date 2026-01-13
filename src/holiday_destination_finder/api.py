@@ -1,12 +1,13 @@
 from datetime import date
-from typing import List
+from typing import List, Optional
+import json
+import threading
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from pydantic import BaseModel
 
-from .main import search_destinations
-
-
+from .kv_queue import enqueue, get_job
+from .worker import main as worker_main  # your existing worker loop
 
 class SearchResult(BaseModel):
     city: str
@@ -24,32 +25,46 @@ class SearchResult(BaseModel):
 
 app = FastAPI(title="Holiday Destination Finder API")
 
+@app.on_event("startup")
+def start_embedded_worker():
+    # IMPORTANT: run uvicorn with --workers 1, otherwise you spawn multiple worker threads
+    t = threading.Thread(target=worker_main, daemon=True)
+    t.start()
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-@app.get("/search", response_model=List[SearchResult])
-async def search(
-    origin: str = Query("WRO", description="Origin IATA Airport code"),
-    start: date = Query(..., description="Start of the departure window (YYYY-MM-DD)"),
-    end: date = Query(..., description="End of the departure window (YYYY-MM-DD)"),
-    trip_length: int = Query(7, description="Trip length in days"),
-    providers: List[str] = Query(["ryanair","wizzair"], description="Providers to use: amadeus, ryanair, wizzair"),
-    top_n: int = Query(10, description="Number of top results to return")
+# Start a job (return immediately)
+@app.get("/search", status_code=202)
+def search(
+    origin: str = Query("WRO"),
+    start: date = Query(...),
+    end: date = Query(...),
+    trip_length: int = Query(7),
+    providers: List[str] = Query(["ryanair", "wizzair"]),
+    top_n: int = Query(10),
 ):
-    
-    start_str = start.isoformat()
-    end_str = end.isoformat()
+    params = {
+        "origin": origin,
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "trip_length": trip_length,
+        "providers": [p.strip().lower() for p in providers if p.strip()],
+        "top_n": top_n,
+    }
+    job_id = enqueue(params)
+    return {"job_id": job_id}
 
-    providers_lower = [p.strip().lower() for p in providers if p.strip()]
+@app.get("/jobs/{job_id}")
+def job(job_id: str):
+    data = get_job(job_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Job not found (expired or restarted)")
 
-    results = search_destinations(
-        origin=origin,
-        start=start_str,
-        end=end_str,
-        trip_length=trip_length,
-        providers=providers_lower,
-        top_n=top_n,
-    )
-
-    return results
+    out = {"job_id": job_id, "status": data.get("status")}
+    if "result" in data:
+        out["payload"] = json.loads(data["result"])
+    if "error" in data:
+        out["error"] = data["error"]
+    return out

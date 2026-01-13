@@ -7,9 +7,21 @@ from pathlib import Path
 import csv, argparse, datetime, threading, time
 
 
+
+def _to_iso(x):
+    return x.isoformat() if hasattr(x, "isoformat") else str(x)
+
+def _normalize_providers(providers):
+    if isinstance(providers, str):
+        return [x.strip().lower() for x in providers.split(",") if x.strip()]
+    return [str(p).strip().lower() for p in (providers or []) if str(p).strip()]
+
+
+
+
 def main(origin, start, end, trip_length, providers, top_n: int = 10):
     
-    providers = [p.strip().lower() for p in (providers or [])]
+    providers = _normalize_providers(providers)
 
     stop_event = threading.Event()
     timer_thread = threading.Thread(
@@ -56,10 +68,11 @@ def search_destinations(
     end: str | None,
     trip_length: int | None,
     providers: list[str] | None,
-    top_n: int = 10
+    top_n: int = 10,
+    verbose: bool = True
 ) -> list[dict]:
     
-    providers = [p.strip().lower() for p in (providers or [])]
+    providers = _normalize_providers(providers)
 
     if origin is None:
         origin = "WRO"
@@ -86,8 +99,10 @@ def search_destinations(
             lat_f = float(row["lat"])
             lon_f = float(row["lon"])
             airport = row['airport']
-            print(f"[processing] CURRENT DESTINATION: {city} ({airport})", flush=True)
-            print(f"[processing] {idx} / {total} destinations processed", flush=True)
+            
+            if verbose:
+                print(f"[processing] CURRENT DESTINATION: {city} ({airport})", flush=True)
+                print(f"[processing] {idx} / {total} destinations processed", flush=True)
 
             offers_a: list[tuple] = []
             offers_r: list[tuple] = []
@@ -98,7 +113,8 @@ def search_destinations(
                 try:
                     offers_a = get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
                 except Exception as e:
-                    print(f"[amadeus] failed for {city} ({airport}): {e}", flush=True)
+                    if verbose:
+                        print(f"[amadeus] failed for {city} ({airport}): {e}", flush=True)
 
             # Ryanair
             if "ryanair" in providers:
@@ -107,14 +123,16 @@ def search_destinations(
                         get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length)
                     )
                 except Exception as e:
-                    print(f"[ryanair] failed for {city} ({airport}): {e}", flush=True)
+                    if verbose:
+                        print(f"[ryanair] failed for {city} ({airport}): {e}", flush=True)
 
             # Wizzair
             if "wizzair" in providers:
                 try:
                     offers_w = find_cheapest_trip(origin, airport, start, end, trip_length)
                 except Exception as e:
-                    print(f"[wizzair] failed for {city} ({airport}): {e}", flush=True)
+                    if verbose:
+                        print(f"[wizzair] failed for {city} ({airport}): {e}", flush=True)
 
             offers_a = offers_a or []
             offers_r = offers_r or []
@@ -133,12 +151,16 @@ def search_destinations(
             best_weather = None
 
             for price, curr, stops, airline, dep, ret in candidates:
-                cache_key = (lat_f, lon_f, dep, ret)
+                dep_s = _to_iso(dep)
+                ret_s = _to_iso(ret)
+                cache_key = (lat_f, lon_f, dep_s, ret_s)
+                
                 if cache_key not in weather_cache:
                     try:
-                        weather_cache[cache_key] = get_weather_data(lat_f, lon_f, dep, ret)
-                    except Exception:
-                        print("[BUG] Failed to retrieve weather data for:", cache_key)
+                        weather_cache[cache_key] = get_weather_data(lat_f, lon_f, dep_s, ret_s)
+                    except Exception as e:
+                        if verbose:
+                            print("[BUG] Failed to retrieve weather data for:", cache_key, e, flush=True)
                         continue
                 weather_info = weather_cache[cache_key]
 
@@ -162,8 +184,8 @@ def search_destinations(
                     "currency": currency,
                     "total_stops": total_stops,
                     "airlines": airlines,
-                    "best_departure": best_dep,
-                    "best_return": best_ret,
+                    "best_departure": _to_iso(best_dep),
+                    "best_return": _to_iso(best_ret),
                     "weather_data": best_weather,              # keep full weather dict for scoring
                 }
                 results.append(result)
