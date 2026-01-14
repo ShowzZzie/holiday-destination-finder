@@ -11,7 +11,13 @@ def price_score(price: float, min_price: float, max_price: float) -> float:
         return 0.0
     if max_price == min_price:
         return 100.0
-    score = 100.0 * (max_price - price) / (max_price - min_price)
+
+    # Normalize 0..1
+    norm = (price - min_price) / (max_price - min_price)
+    norm = max(0.0, min(1.0, norm))
+
+    score = 100.0 - 50.0 * norm
+    #score = 100.0 * (max_price - price) / (max_price - min_price)
     return max(0.0, min(100.0, score))
 
 
@@ -19,12 +25,21 @@ def weather_score(weather):
     temp = weather["avg_temp_c"]
     rain = weather["avg_precip_mm_per_day"]
 
-    temp_score = 100
+    ideal_temp = 26.0
+    penalty_per_degree = 3.0
 
-    if temp < 20:
-        temp_score = max(0, 100 - (20 - temp) * 8)
-    elif temp > 26:
-        temp_score = max(0, 100 - (temp - 26) * 8)
+    temp_score = max(0.0, 100.0 - penalty_per_degree * abs(temp - ideal_temp))
+
+    # OLD TEMP_SCORE SOLUTION BELOW, COMMENTED OUT LINES
+    #temp_score = 100
+
+    #if temp < 20:
+    #    temp_score = max(0, 100 - (20 - temp) * 8)
+    #elif temp > 26:
+    #    temp_score = max(0, 100 - (temp - 26) * 8)
+
+    if rain < 1.0:
+        rain = 0.0
 
     rain_score = max(0, 100 - (rain * 15))
 
