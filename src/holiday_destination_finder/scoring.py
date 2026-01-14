@@ -1,7 +1,7 @@
 def total_score(weather_data, flight_price, total_stops, min_price, max_price) -> float:
     p = price_score(float(flight_price), min_price, max_price) * stop_penalty(total_stops)
     w = weather_score(weather_data)
-    return 0.6 * p + 0.4 * w
+    return 0.4 * p + 0.6 * w
 
 
 
