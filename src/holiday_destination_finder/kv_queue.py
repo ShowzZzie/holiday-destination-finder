@@ -33,3 +33,13 @@ def set_done(job_id: str, payload: dict):
 def set_failed(job_id: str, error: str):
     r.hset(f"job:{job_id}", mapping={"status": "failed", "error": error})
     r.expire(f"job:{job_id}", JOB_TTL_S)
+
+def set_progress(job_id: str, processed: int, total: int, city: str | None = None, airport: str | None = None):
+    mapping = {
+        "processed": str(processed),
+        "total": str(total)
+    }
+    if city and airport:
+        mapping["current"] = f"{city} ({airport})"
+    r.hset(f"job:{job_id}", mapping=mapping)
+    r.expire(f"job:{job_id}", JOB_TTL_S)

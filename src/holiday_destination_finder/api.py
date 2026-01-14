@@ -63,8 +63,21 @@ def job(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found (expired or restarted)")
 
     out = {"job_id": job_id, "status": data.get("status")}
+    
+    if "processed" in data and "total" in data:
+        try:
+            out["processed"] = int(data["processed"])
+            out["total"] = int(data["total"])
+        except ValueError:
+            out["processed"] = data["processed"]
+            out["total"] = data["total"]
+    
+    if "current" in data:
+        out["current"] = data["current"]
+
     if "result" in data:
         out["payload"] = json.loads(data["result"])
     if "error" in data:
         out["error"] = data["error"]
+    
     return out

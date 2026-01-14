@@ -1,7 +1,8 @@
 import os, json, traceback
 import redis
+import time
 
-from holiday_destination_finder.kv_queue import QUEUE, set_running, set_done, set_failed
+from holiday_destination_finder.kv_queue import QUEUE, set_running, set_done, set_failed, set_progress
 from holiday_destination_finder.main import search_destinations
 
 r = redis.Redis.from_url(os.environ["REDIS_URL"], decode_responses=True)
@@ -25,7 +26,17 @@ def main():
             providers = params.get("providers", ["ryanair", "wizzair"])
             top_n = int(params.get("top_n", 10))
 
-            results = search_destinations(origin, start, end, trip_length, providers, top_n=top_n, verbose=False)
+            last_update = 0.0
+
+            def progress_cb(idx: int, total: int, city: str, airport: str):
+                nonlocal last_update
+                now = time.monotonic()
+
+                if now - last_update >= 1.0:
+                    set_progress(job_id, idx, total, city, airport)
+                    last_update = now
+
+            results = search_destinations(origin, start, end, trip_length, providers, top_n=top_n, verbose=False, progress_cb=progress_cb)
 
             payload = {"meta": {"origin": origin, "start": start, "end": end,
                                 "trip_length": trip_length, "providers": providers, "top_n": top_n},

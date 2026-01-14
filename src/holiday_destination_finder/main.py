@@ -69,7 +69,8 @@ def search_destinations(
     trip_length: int | None,
     providers: list[str] | None,
     top_n: int = 10,
-    verbose: bool = True
+    verbose: bool = True,
+    progress_cb = None
 ) -> list[dict]:
     
     providers = _normalize_providers(providers)
@@ -81,8 +82,8 @@ def search_destinations(
     if end is None:
         end = "2026-05-31"
     if trip_length is None:
-        start_dt_tl = datetime.strptime(start, "%Y-%m-%d")
-        end_dt_tl = datetime.strptime(end, "%Y-%m-%d")
+        start_dt_tl = datetime.datetime.strptime(start, "%Y-%m-%d")
+        end_dt_tl = datetime.datetime.strptime(end, "%Y-%m-%d")
         
         trip_length = (end_dt_tl - start_dt_tl).days
         if trip_length <= 0:
@@ -109,6 +110,12 @@ def search_destinations(
             if verbose:
                 print(f"[processing] CURRENT DESTINATION: {city} ({airport})", flush=True)
                 print(f"[processing] {idx} / {total} destinations processed", flush=True)
+
+            if progress_cb:
+                try:
+                    progress_cb(idx, total, city, airport)
+                except Exception:
+                    pass
 
             offers_a: list[tuple] = []
             offers_r: list[tuple] = []
