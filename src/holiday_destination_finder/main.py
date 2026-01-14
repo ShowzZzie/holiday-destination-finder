@@ -81,7 +81,13 @@ def search_destinations(
     if end is None:
         end = "2026-05-31"
     if trip_length is None:
-        trip_length = 7
+        start_dt_tl = datetime.strptime(start, "%Y-%m-%d")
+        end_dt_tl = datetime.strptime(end, "%Y-%m-%d")
+        
+        trip_length = (end_dt_tl - start_dt_tl).days
+        if trip_length <= 0:
+            raise ValueError("end must be after start for inferred trip_length")
+
 
     results: list[dict] = []
     weather_cache: dict[tuple[float, float, str, str], dict] = {}
