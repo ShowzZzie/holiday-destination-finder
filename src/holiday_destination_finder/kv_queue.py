@@ -27,16 +27,12 @@ def set_running(job_id: str):
     r.expire(f"job:{job_id}", JOB_TTL_S)
 
 def set_done(job_id: str, payload: dict):
-    key = f"job:{job_id}"
-    r.hset(key, mapping={"status": "done", "result": json.dumps(payload)})
-    r.hdel(key, "processed", "total", "current")
-    r.expire(key, JOB_TTL_S)
+    r.hset(f"job:{job_id}", mapping={"status": "done", "result": json.dumps(payload)})
+    r.expire(f"job:{job_id}", JOB_TTL_S)
 
 def set_failed(job_id: str, error: str):
-    key = f"job:{job_id}"
-    r.hset(key, mapping={"status": "failed", "error": error})
-    r.hdel(key, "processed", "total", "current")
-    r.expire(key, JOB_TTL_S)
+    r.hset(f"job:{job_id}", mapping={"status": "failed", "error": error})
+    r.expire(f"job:{job_id}", JOB_TTL_S)
 
 def set_progress(job_id: str, processed: int, total: int, city: str | None = None, airport: str | None = None):
     mapping = {
