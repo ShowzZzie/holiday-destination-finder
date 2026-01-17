@@ -26,8 +26,6 @@ _ERRORS = {
     "other_err_det": 0
 }
 
-MAX_WIZZ_SECONDS_PER_CITY = 60.0
-
 def wizzair_call_stats():
     return {"calls": dict(_CALLS), "errors": dict(_ERRORS)}
 
@@ -57,7 +55,6 @@ def _search_with_retries(filters, max_retries=5, base_sleep=1.0):
 
 
 def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: str, trip_length: int):
-    start_t = time.monotonic()
     found_flights = []
     trips = []
     origin = origin.upper()
@@ -72,9 +69,6 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
         raise ValueError("to_date must be >= from_date")
 
     while from_date_dt <= to_date_dt - timedelta(days=trip_length):
-        if time.monotonic() - start_t > MAX_WIZZ_SECONDS_PER_CITY:
-            print(f"[wizzair] timeout for {destination} after {MAX_WIZZ_SECONDS_PER_CITY}s, skipping rest", flush=True)
-            break
         _CALLS["date_checks"] += 1
         dep = from_date_dt.date().isoformat()
         ret = (from_date_dt + timedelta(days=trip_length)).date().isoformat()
