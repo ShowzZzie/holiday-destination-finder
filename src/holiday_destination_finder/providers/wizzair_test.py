@@ -82,6 +82,39 @@ def _search_dates_with_retries(filters, max_retries=5, base_sleep=1.0):
     return None
 
 
+
+def _get_source_currency() -> str:
+    """
+    Decide what currency fli numeric prices are in.
+
+    Priority:
+      1) FLI_SOURCE_CCY (explicit override, e.g. EUR/PLN/USD)
+      2) USER_LOCAL_CURRENCY (set once in main or shell)
+      3) If on Render (RENDER=true) -> EUR
+      4) Fallback -> EUR
+    """
+    env_ccy = os.getenv("FLI_SOURCE_CCY")
+    if env_ccy:
+        src = env_ccy.strip().upper()
+        print(f"[wizzair] Using source currency from FLI_SOURCE_CCY: {src}", flush=True)
+        return src
+
+    user_ccy = os.getenv("USER_LOCAL_CURRENCY")
+    if user_ccy:
+        src = user_ccy.strip().upper()
+        print(f"[wizzair] Using source currency from USER_LOCAL_CURRENCY: {src}", flush=True)
+        return src
+
+    if os.getenv("RENDER") == "true":
+        print("[wizzair] Detected Render env -> treating fli prices as EUR.", flush=True)
+        return "EUR"
+
+    print("[wizzair] No explicit currency set, defaulting fli source currency to EUR.", flush=True)
+    return "EUR"
+
+
+
+
 def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: str, trip_length: int):
     """
     Find cheapest trips using SearchDates API for faster performance.
@@ -106,6 +139,8 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
     except KeyError:
         _ERRORS["other_err_det"] += 1
         return []
+
+    source_currency = _get_source_currency()
 
     # IMPORTANT: to_date is the latest RETURN date, not departure date
     # So the latest departure date is: to_date - trip_length
@@ -173,7 +208,7 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
                     all_valid_dates.append({
                         'dep_date': dep_date,
                         'ret_date': ret_date,
-                        'price_usd': result.price,
+                        'price_raw': result.price,
                     })
         else:
             print(f"[wizzair] No results found for {window_start} to {window_end}", flush=True)
@@ -235,7 +270,7 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
                         all_valid_dates.append({
                             'dep_date': dep_date,
                             'ret_date': ret_date,
-                            'price_usd': result.price,
+                            'price_raw': result.price,
                         })
             else:
                 print(f"[wizzair] Window {window_num}: No results found", flush=True)
@@ -248,7 +283,7 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
     seen = {}
     for item in all_valid_dates:
         key = (item['dep_date'], item['ret_date'])
-        if key not in seen or item['price_usd'] < seen[key]['price_usd']:
+        if key not in seen or item['price_raw'] < seen[key]['price_raw']:
             seen[key] = item
     
     all_valid_dates = list(seen.values())
@@ -266,9 +301,9 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
         dep_date = item['dep_date']
         ret_date = item['ret_date']
         
-        if idx % 10 == 0 or idx == len(all_valid_dates):
-            print(f"[wizzair] Verifying {idx}/{len(all_valid_dates)}: {dep_date} → {ret_date}", flush=True)
-        
+        _CALLS["date_checks"] += 1
+        print(f"[wizzair] checking {idx}/{len(all_valid_dates)}: {dep_date} -> {ret_date}", flush=True)
+
         try:
             # Use SearchFlights to get accurate price for this specific date combination
             flight_segments = [
@@ -295,17 +330,41 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
             )
             
             flight_results = _search_with_retries(filters)
-            
+            if not flight_results:
+                print(f"[wizzair] no SearchFlights results for {dep_date} -> {ret_date}", flush=True)
+                continue
+
+
             if flight_results and len(flight_results) > 0:
                 try:
                     outbound, return_flight = flight_results[0]
-                    trip_price = outbound.price if outbound.price == return_flight.price else (outbound.price + return_flight.price)
+                    p_out = float(outbound.price)
+                    p_ret = float(return_flight.price)
+                    EPS = 0.01  # 1 cent
 
-                    price_eur = c.convert(trip_price, "USD", "EUR")
+                    if abs(p_out - p_ret) <= EPS:
+                        trip_price = p_out
+                    else:
+                        print(
+                            f"[wizzair] WARNING: prices differ out={p_out} ret={p_ret} for {dep_date}->{ret_date} "
+                            f"(taking min to avoid double count)",
+                            flush=True
+                        )
+                        trip_price = min(p_out, p_ret)
+
+                    if source_currency == "EUR":
+                        price_eur = float(trip_price)
+                    else:
+                        price_eur = float(c.convert(trip_price, source_currency, "EUR"))
                     
                     # Extract actual dates from flight results (in case they differ slightly)
                     dep_actual = outbound.legs[0].departure_datetime.date().isoformat()
                     ret_actual = return_flight.legs[0].departure_datetime.date().isoformat()
+                    
+                    print(
+                        f"[wizzair] FINAL price for {dep_actual}->{ret_actual}: {trip_price} {source_currency} => {price_eur:.2f} EUR",
+                        flush=True
+                    )
                     
                     trips.append((
                         round(price_eur, 2),  # price

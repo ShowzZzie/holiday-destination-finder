@@ -4,7 +4,7 @@ from holiday_destination_finder.scoring import total_score
 from holiday_destination_finder.providers.ryanair_test import find_cheapest_offer, get_cheapest_ryanair_offer_for_dates
 from holiday_destination_finder.providers.wizzair_test import find_cheapest_trip
 from pathlib import Path
-import csv, argparse, datetime, threading, time
+import csv, argparse, datetime, threading, time, os, requests
 
 
 
@@ -20,6 +20,31 @@ def _normalize_providers(providers):
 
 
 def main(origin, start, end, trip_length, providers, top_n: int = 10):
+
+    if not os.getenv("USER_LOCAL_CURRENCY") and not os.getenv("FLI_SOURCE_CCY"):
+        try:
+            r = requests.get("https://ipapi.co/currency/", timeout=5)
+
+            if r.status_code == 200 and r.ok:
+                cc = r.text.strip().upper()
+                if len(cc) == 3:
+                    print(f"[main] Detected local currency via IPAPI: {cc}")
+                    os.environ["USER_LOCAL_CURRENCY"] = cc
+                else:
+                    print(f"[main] IPAPI returned malformed currency '{r.text}', falling back")
+            else:
+                body = r.text.strip()[:100] if r.text else "NO_BODY"
+                print(f"[main] IPAPI returned HTTP {r.status_code} — body: '{body}'")
+
+        except Exception as e:
+            print(f"[main] Exception during IPAPI lookup: {e}")
+
+        # If still no currency -> fallback
+        if not os.getenv("USER_LOCAL_CURRENCY"):
+            fallback = "PLN"
+            os.environ["USER_LOCAL_CURRENCY"] = fallback
+            print(f"[main] Fallback USER_LOCAL_CURRENCY set to '{fallback}'")
+
     
     providers = _normalize_providers(providers)
 
