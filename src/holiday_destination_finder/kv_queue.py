@@ -47,3 +47,23 @@ def set_progress(job_id: str, processed: int, total: int, city: str | None = Non
         mapping["current"] = f"{city} ({airport})"
     r.hset(f"job:{job_id}", mapping=mapping)
     r.expire(f"job:{job_id}", JOB_TTL_S)
+
+def get_queue_position(job_id: str) -> int | None:
+    """Get the position of a job in the queue. Returns None if job is not in queue."""
+    try:
+        # Get all job IDs in the queue
+        queue_items = r.lrange(QUEUE, 0, -1)
+        if not queue_items:
+            return None
+        
+        # Find the position of this job_id (1-based)
+        try:
+            position = queue_items.index(job_id)
+            return position + 1  # Convert 0-based to 1-based
+        except ValueError:
+            # Job not in queue (might have been popped already)
+            return None
+    except Exception as e:
+        # Log error for debugging but don't break the API
+        print(f"[kv_queue] Error getting queue position: {e}")
+        return None

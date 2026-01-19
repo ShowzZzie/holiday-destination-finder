@@ -7,7 +7,7 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from .kv_queue import enqueue, get_job
+from .kv_queue import enqueue, get_job, get_queue_position
 from .worker import main as worker_main  # your existing worker loop
 
 class SearchResult(BaseModel):
@@ -74,6 +74,14 @@ def job(job_id: str):
 
     status = data.get("status")
     out = {"job_id": job_id, "status": status}
+    
+    if status == "queued":
+        # Get queue position for queued jobs
+        queue_position = get_queue_position(job_id)
+        if queue_position is not None:
+            out["queue_position"] = queue_position
+        # If queue_position is None, job might have just been popped or queue is empty
+        # We'll still include queue_position: null to indicate we checked
     
     if status in ("queued", "running"):
         if "processed" in data and "total" in data:
