@@ -35,6 +35,11 @@ export default function Home() {
           const status = await getJobStatus(jobStatus.job_id);
           setJobStatus(status);
           
+          // Debug: log queue position if available
+          if (status.status === 'queued' && status.queue_position !== undefined) {
+            console.log(`📍 Job ${status.job_id} queue position: #${status.queue_position}`);
+          }
+          
           if (status.status === 'done' || status.status === 'failed') {
             setIsSearching(false);
             clearInterval(interval);
