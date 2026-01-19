@@ -385,33 +385,31 @@ function DestinationCard({ result, rank }: { result: SearchResult; rank: number 
 
   return (
     <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg p-5 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
-      {/* Flag background - fluid wavy, attached on left, flowing NW to SE */}
+      {/* Flag background - waved trapezoid, attached on left */}
       <div className="absolute -left-8 top-0 bottom-0 w-44 opacity-30 dark:opacity-18 pointer-events-none" style={{ overflow: 'visible' }}>
         <div 
           className="w-full h-full relative"
           style={{
-            animation: 'flagWave 8s ease-in-out infinite',
-            transformOrigin: 'left center',
             maskImage: 'linear-gradient(to right, black 0%, black 85%, transparent 100%)',
             WebkitMaskImage: 'linear-gradient(to right, black 0%, black 85%, transparent 100%)',
           }}
         >
           <div
-            className="absolute inset-0"
+            className="absolute"
             style={{
               background: `url(${flagUrl})`,
               backgroundSize: 'cover',
-              backgroundPosition: '30% center',
+              backgroundPosition: 'center center',
               backgroundRepeat: 'no-repeat',
-              transform: 'perspective(600px) rotateY(15deg) rotateZ(-8deg) skewY(-5deg) scale(1.5)',
-              transformOrigin: 'left center',
-              filter: 'blur(0.2px)',
-              width: '150%',
-              height: '110%',
-              top: '2%',
-              left: '-22%',
-              maskImage: 'radial-gradient(ellipse 120% 100% at left center, black 60%, transparent 90%)',
-              WebkitMaskImage: 'radial-gradient(ellipse 120% 100% at left center, black 60%, transparent 90%)',
+              clipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)',
+              WebkitClipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)',
+              filter: 'blur(0px)',
+              width: '120%',
+              height: '100%',
+              top: '0%',
+              left: '14%',
+              maskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
             }}
           />
         </div>
@@ -487,33 +485,31 @@ function WideDestinationCard({ result, rank }: { result: SearchResult; rank: num
 
   return (
     <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
-      {/* Flag background - fluid wavy, attached on left, flowing NW to SE */}
+      {/* Flag background - waved trapezoid, attached on left */}
       <div className="absolute -left-16 top-0 bottom-0 w-64 opacity-30 dark:opacity-18 pointer-events-none" style={{ overflow: 'visible' }}>
         <div 
           className="w-full h-full relative"
           style={{
-            animation: 'flagWaveWide 10s ease-in-out infinite',
-            transformOrigin: 'left center',
             maskImage: 'linear-gradient(to right, black 0%, black 80%, transparent 100%)',
             WebkitMaskImage: 'linear-gradient(to right, black 0%, black 80%, transparent 100%)',
           }}
         >
           <div
-            className="absolute inset-0"
+            className="absolute"
             style={{
               background: `url(${flagUrl})`,
               backgroundSize: 'cover',
-              backgroundPosition: '25% center',
+              backgroundPosition: 'center center',
               backgroundRepeat: 'no-repeat',
-              transform: 'perspective(700px) rotateY(18deg) rotateZ(-10deg) skewY(-6deg) scale(1.6)',
-              transformOrigin: 'left center',
-              filter: 'blur(0.2px)',
-              width: '150%',
-              height: '115%',
-              top: '-3%',
-              left: '-18%',
-              maskImage: 'radial-gradient(ellipse 130% 110% at left center, black 55%, transparent 88%)',
-              WebkitMaskImage: 'radial-gradient(ellipse 130% 110% at left center, black 55%, transparent 88%)',
+              clipPath: 'polygon(0 0, 80% 0, 95% 100%, 0 100%)',
+              WebkitClipPath: 'polygon(0 0, 80% 0, 95% 100%, 0 100%)',
+              filter: 'blur(0px)',
+              width: '125%',
+              height: '100%',
+              top: '0%',
+              left: '0%',
+              maskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
             }}
           />
         </div>
@@ -594,33 +590,30 @@ function ListDestinationCard({ result, rank }: { result: SearchResult; rank: num
 
   return (
     <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
-      {/* Flag background - fluid wavy, attached on left, flowing NW to SE */}
+      {/* Flag background - circular icon for position 5+, fills height */}
       <div className="absolute -left-6 top-0 bottom-0 w-32 opacity-30 dark:opacity-18 pointer-events-none" style={{ overflow: 'visible' }}>
         <div 
           className="w-full h-full relative"
           style={{
-            animation: 'flagWaveList 7s ease-in-out infinite',
-            transformOrigin: 'left center',
             maskImage: 'linear-gradient(to right, black 0%, black 88%, transparent 100%)',
             WebkitMaskImage: 'linear-gradient(to right, black 0%, black 88%, transparent 100%)',
           }}
         >
           <div
-            className="absolute inset-0"
+            className="absolute"
             style={{
               background: `url(${flagUrl})`,
               backgroundSize: 'cover',
-              backgroundPosition: '25% center',
+              backgroundPosition: 'center center',
               backgroundRepeat: 'no-repeat',
-              transform: 'perspective(500px) rotateY(12deg) rotateZ(-6deg) skewY(-4deg) scale(1.4)',
-              transformOrigin: 'left center',
-              filter: 'blur(0.2px)',
-              width: '145%',
-              height: '108%',
-              top: '14%',
-              left: '-12%',
-              maskImage: 'radial-gradient(ellipse 115% 105% at left center, black 65%, transparent 92%)',
-              WebkitMaskImage: 'radial-gradient(ellipse 115% 105% at left center, black 65%, transparent 92%)',
+              filter: 'blur(0px)',
+              width: '100%',
+              height: '100%',
+              top: '0%',
+              left: '6%',
+              borderRadius: '0 0 0 0',
+              maskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
             }}
           />
         </div>
