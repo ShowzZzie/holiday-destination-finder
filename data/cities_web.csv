@@ -1,0 +1,16 @@
+city,country,lat,lon,airport,country_code,continent,region,airport_name
+Lisbon,Portugal,38.7077,-9.1363,LIS,PT,EU,Iberia,Humberto Delgado Airport
+Madrid,Spain,40.4168,-3.7038,MAD,ES,EU,Iberia,Adolfo Suarez Madrid-Barajas Airport
+Valencia,Spain,39.4699,-0.3763,VLC,ES,EU,Iberia,Valencia Airport
+Malaga,Spain,36.7212,-4.4214,AGP,ES,EU,Iberia,Málaga-Costa del Sol Airport
+Rome,Italy,41.9029,12.4964,FCO,IT,EU,Southern_Europe,Leonardo da Vinci-Fiumicino Airport
+Rome,Italy,41.8025,12.2555,CIA,IT,EU,Southern_Europe,Rome Ciampino Airport
+Catania,Italy,37.4922,15.0700,CTA,IT,EU,Southern_Europe,Catania-Fontanarossa Airport
+Santorini,Greece,36.3932,25.4615,JTR,GR,EU,Southern_Europe,Santorini Airport
+Dubrovnik,Croatia,42.6418,18.0948,DBV,HR,EU,Southern_Europe,Dubrovnik Airport
+Bangkok,Thailand,13.7563,100.5018,BKK,TH,AS,Southeast_Asia,Suvarnabhumi Airport
+Bangkok,Thailand,13.7563,100.5018,DMK,TH,AS,Southeast_Asia,Don Mueang International Airport
+Florence,Italy,43.7696,11.2558,FLR,IT,EU,Southern_Europe,Florence Airport
+New York,USA,40.7128,-74.0060,JFK,US,NA,North_America,John F. Kennedy International Airport
+New York,USA,40.7128,-74.0060,LGA,US,NA,North_America,LaGuardia Airport
+New York,USA,40.7128,-74.0060,EWR,US,NA,North_America,Newark Liberty International Airport

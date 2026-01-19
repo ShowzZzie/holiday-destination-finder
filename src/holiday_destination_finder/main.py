@@ -21,6 +21,21 @@ def _normalize_providers(providers):
 
 def main(origin, start, end, trip_length, providers, top_n: int = 10):
 
+    if origin is None:
+        origin = input("Enter origin airport IATA code: ")
+    if start is None:
+        start = input("Enter start date (YYYY-MM-DD): ")
+    if end is None:
+        end = input("Enter end date (YYYY-MM-DD): ")
+    if trip_length is None:
+        trip_length = int(input("Enter trip length in days: "))
+        # start_dt_tl = datetime.datetime.strptime(start, "%Y-%m-%d")
+        # end_dt_tl = datetime.datetime.strptime(end, "%Y-%m-%d")
+        
+        #trip_length = (end_dt_tl - start_dt_tl).days
+        if trip_length <= 0:
+            raise ValueError("end must be after start for inferred trip_length")
+
     if not os.getenv("USER_LOCAL_CURRENCY") and not os.getenv("FLI_SOURCE_CCY"):
         try:
             r = requests.get("https://ipapi.co/currency/", timeout=5)
@@ -100,24 +115,29 @@ def search_destinations(
     
     providers = _normalize_providers(providers)
 
-    if origin is None:
-        origin = "WRO"
+    """if origin is None:
+        origin = input("Enter origin airport IATA code: ")
     if start is None:
-        start = "2026-05-01"
+        start = input("Enter start date (YYYY-MM-DD): ")
     if end is None:
-        end = "2026-05-31"
+        end = input("Enter end date (YYYY-MM-DD): ")
     if trip_length is None:
-        start_dt_tl = datetime.datetime.strptime(start, "%Y-%m-%d")
-        end_dt_tl = datetime.datetime.strptime(end, "%Y-%m-%d")
+        trip_length = int(input("Enter trip length in days: "))
+        # start_dt_tl = datetime.datetime.strptime(start, "%Y-%m-%d")
+        # end_dt_tl = datetime.datetime.strptime(end, "%Y-%m-%d")
         
-        trip_length = (end_dt_tl - start_dt_tl).days
+        #trip_length = (end_dt_tl - start_dt_tl).days
         if trip_length <= 0:
-            raise ValueError("end must be after start for inferred trip_length")
+            raise ValueError("end must be after start for inferred trip_length")"""
 
 
     results: list[dict] = []
     weather_cache: dict[tuple[float, float, str, str], dict] = {}
-    CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities.csv"
+
+    if os.getenv("RENDER") == "true":
+        CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities_web.csv"
+    else:
+        CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities_local.csv"
 
     with open(CITIES_CSV, newline="", encoding="utf-8") as fh:
         total = sum(1 for _ in fh) - 1  # subtract header
