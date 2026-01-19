@@ -32,11 +32,15 @@ export interface JobResponse {
 
 export interface JobStatus {
   job_id: string;
-  status: 'queued' | 'running' | 'completed' | 'failed';
+  status: 'queued' | 'running' | 'done' | 'failed';
+  queue_position?: number;
   processed?: number;
   total?: number;
   current?: string;
-  payload?: SearchResult[];
+  payload?: {
+    meta?: any;
+    results?: SearchResult[];
+  };
   error?: string;
 }
 

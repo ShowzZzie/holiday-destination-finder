@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { startSearch, getJobStatus, checkHealth, SearchParams, JobStatus, SearchResult } from '@/lib/api';
+import { getCountryCode, getFlagUrl } from '@/lib/country-flags';
 
 export default function Home() {
   const [formData, setFormData] = useState<SearchParams>({
@@ -10,7 +12,7 @@ export default function Home() {
     end: '',
     trip_length: 7,
     providers: ['ryanair', 'wizzair'],
-    top_n: 10,
+    top_n: 5,
   });
   
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
@@ -33,7 +35,7 @@ export default function Home() {
           const status = await getJobStatus(jobStatus.job_id);
           setJobStatus(status);
           
-          if (status.status === 'completed' || status.status === 'failed') {
+          if (status.status === 'done' || status.status === 'failed') {
             setIsSearching(false);
             clearInterval(interval);
           }
@@ -45,6 +47,9 @@ export default function Home() {
       }, 2000); // Poll every 2 seconds
 
       return () => clearInterval(interval);
+    } else if (jobStatus.status === 'done' || jobStatus.status === 'failed') {
+      // Ensure isSearching is false if job is already done/failed
+      setIsSearching(false);
     }
   }, [jobStatus, isSearching]);
 
@@ -56,8 +61,15 @@ export default function Home() {
 
     try {
       const response = await startSearch(formData);
+      console.log('🔍 Search Job Created - Job ID:', response.job_id);
+      console.log('📍 Direct API URL:', `${process.env.NEXT_PUBLIC_API_URL || 'https://holiday-destination-finder.onrender.com'}/jobs/${response.job_id}`);
       const initialStatus = await getJobStatus(response.job_id);
       setJobStatus(initialStatus);
+      
+      // If job is already done/failed, reset searching state
+      if (initialStatus.status === 'done' || initialStatus.status === 'failed') {
+        setIsSearching(false);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start search');
       setIsSearching(false);
@@ -73,19 +85,24 @@ export default function Home() {
     }));
   };
 
-  // Set default dates (today + 30 days for start, +37 for end)
+  // Set default dates (first and last day of next month)
   useEffect(() => {
+    const formatDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     const today = new Date();
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() + 30);
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 60);
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const lastDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
 
     if (!formData.start) {
       setFormData(prev => ({
         ...prev,
-        start: startDate.toISOString().split('T')[0],
-        end: endDate.toISOString().split('T')[0],
+        start: formatDate(nextMonth),
+        end: formatDate(lastDayNextMonth),
       }));
     }
   }, []);
@@ -233,8 +250,23 @@ export default function Home() {
           <JobStatusDisplay jobStatus={jobStatus} />
         )}
 
-        {jobStatus?.status === 'completed' && jobStatus.payload && (
-          <ResultsDisplay results={jobStatus.payload} />
+        {jobStatus?.status === 'done' && jobStatus.payload?.results && (
+          <ResultsDisplay results={jobStatus.payload.results} />
+        )}
+        
+        {jobStatus?.status === 'done' && jobStatus.payload && !jobStatus.payload.results && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <p className="text-gray-600 dark:text-gray-400 text-center">
+              No destinations found. Try adjusting your search parameters.
+            </p>
+          </div>
+        )}
+        
+        {jobStatus?.status === 'failed' && jobStatus.error && (
+          <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-300 rounded-lg p-4">
+            <h3 className="font-semibold mb-2">Search Failed</h3>
+            <p className="text-sm whitespace-pre-wrap">{jobStatus.error}</p>
+          </div>
         )}
       </div>
     </div>
@@ -242,7 +274,7 @@ export default function Home() {
 }
 
 function JobStatusDisplay({ jobStatus }: { jobStatus: JobStatus }) {
-  if (jobStatus.status === 'completed' || jobStatus.status === 'failed') {
+  if (jobStatus.status === 'done' || jobStatus.status === 'failed') {
     return null;
   }
 
@@ -264,6 +296,17 @@ function JobStatusDisplay({ jobStatus }: { jobStatus: JobStatus }) {
             </span>
           )}
         </div>
+        {jobStatus.status === 'queued' && jobStatus.queue_position !== undefined && (
+          <div className="text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <span className="font-medium">Queue Position: </span>
+            <span className="font-semibold text-blue-600 dark:text-blue-400">
+              #{jobStatus.queue_position}
+            </span>
+            {jobStatus.queue_position === 1 && (
+              <span className="ml-2 text-xs">(Next in queue)</span>
+            )}
+          </div>
+        )}
         {jobStatus.total && jobStatus.processed !== undefined && (
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
             <div
@@ -293,78 +336,324 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
     );
   }
 
+  const firstResult = results[0];
+  const secondRowResults = results.slice(1, 4); // Results 2, 3, 4
+  const remainingResults = results.slice(4); // Results 5+
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
       <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">
         Top {results.length} Destinations
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {results.map((result, index) => (
-          <DestinationCard key={index} result={result} rank={index + 1} />
-        ))}
+      
+      <div className="space-y-6">
+        {/* First result - full width */}
+        {firstResult && (
+          <WideDestinationCard result={firstResult} rank={1} />
+        )}
+
+        {/* Results 2, 3, 4 - row of 3 */}
+        {secondRowResults.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {secondRowResults.map((result, index) => (
+              <DestinationCard key={index + 2} result={result} rank={index + 2} />
+            ))}
+          </div>
+        )}
+
+        {/* Remaining results - vertical list */}
+        {remainingResults.length > 0 && (
+          <div className="space-y-4">
+            {remainingResults.map((result, index) => (
+              <ListDestinationCard key={index + 5} result={result} rank={index + 5} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 function DestinationCard({ result, rank }: { result: SearchResult; rank: number }) {
+  const countryCode = getCountryCode(result.country);
+  const flagUrl = getFlagUrl(countryCode, 'w2560');
+
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800">
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-              #{rank}
-            </span>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {result.city}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {result.country} ({result.airport})
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-lg font-bold text-green-600 dark:text-green-400">
-            {result.currency} {result.flight_price.toFixed(2)}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Score: {result.score.toFixed(1)}
-          </div>
+    <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg p-5 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
+      {/* Flag background - fluid wavy, attached on left, flowing NW to SE */}
+      <div className="absolute -left-8 top-0 bottom-0 w-44 opacity-30 dark:opacity-18 pointer-events-none" style={{ overflow: 'visible' }}>
+        <div 
+          className="w-full h-full relative"
+          style={{
+            animation: 'flagWave 8s ease-in-out infinite',
+            transformOrigin: 'left center',
+            maskImage: 'linear-gradient(to right, black 0%, black 85%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, black 0%, black 85%, transparent 100%)',
+          }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `url(${flagUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: '30% center',
+              backgroundRepeat: 'no-repeat',
+              transform: 'perspective(600px) rotateY(15deg) rotateZ(-8deg) skewY(-5deg) scale(1.5)',
+              transformOrigin: 'left center',
+              filter: 'blur(0.2px)',
+              width: '150%',
+              height: '110%',
+              top: '2%',
+              left: '-22%',
+              maskImage: 'radial-gradient(ellipse 120% 100% at left center, black 60%, transparent 90%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 120% 100% at left center, black 60%, transparent 90%)',
+            }}
+          />
         </div>
       </div>
 
-      <div className="space-y-2 text-sm">
-        <div className="flex items-center justify-between">
-          <span className="text-gray-600 dark:text-gray-400">🌡️ Temperature</span>
-          <span className="font-medium text-gray-900 dark:text-white">
-            {result.avg_temp_c.toFixed(1)}°C
-          </span>
+      <div className="relative z-10">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                #{rank}
+              </span>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {result.city}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {result.country} ({result.airport})
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-bold text-green-600 dark:text-green-400">
+              {result.currency} {result.flight_price.toFixed(2)}
+            </div>
+            <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+              Score: {result.score.toFixed(1)}
+            </div>
+          </div>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-600 dark:text-gray-400">🌧️ Rainfall</span>
-          <span className="font-medium text-gray-900 dark:text-white">
-            {result.avg_precip_mm_per_day.toFixed(2)} mm/day
-          </span>
+
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-400">🌡️ Temperature</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {result.avg_temp_c.toFixed(1)}°C
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-400">🌧️ Rainfall</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {result.avg_precip_mm_per_day.toFixed(2)} mm/day
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-400">✈️ Stops</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {result.total_stops === 0 ? 'Direct' : `${result.total_stops} stop(s)`}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-400">🛫 Airline</span>
+            <span className="font-medium text-gray-900 dark:text-white text-right max-w-[60%] truncate">
+              {result.airlines}
+            </span>
+          </div>
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <div className="text-sm font-medium text-gray-900 dark:text-white">
+              <div>✈️ Departure: {new Date(result.best_departure).toLocaleDateString()}</div>
+              <div>🔄 Return: {new Date(result.best_return).toLocaleDateString()}</div>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-600 dark:text-gray-400">✈️ Stops</span>
-          <span className="font-medium text-gray-900 dark:text-white">
-            {result.total_stops === 0 ? 'Direct' : `${result.total_stops} stop(s)`}
-          </span>
+      </div>
+    </div>
+  );
+}
+
+function WideDestinationCard({ result, rank }: { result: SearchResult; rank: number }) {
+  const countryCode = getCountryCode(result.country);
+  const flagUrl = getFlagUrl(countryCode, 'w2560');
+
+  return (
+    <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
+      {/* Flag background - fluid wavy, attached on left, flowing NW to SE */}
+      <div className="absolute -left-16 top-0 bottom-0 w-64 opacity-30 dark:opacity-18 pointer-events-none" style={{ overflow: 'visible' }}>
+        <div 
+          className="w-full h-full relative"
+          style={{
+            animation: 'flagWaveWide 10s ease-in-out infinite',
+            transformOrigin: 'left center',
+            maskImage: 'linear-gradient(to right, black 0%, black 80%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, black 0%, black 80%, transparent 100%)',
+          }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `url(${flagUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: '25% center',
+              backgroundRepeat: 'no-repeat',
+              transform: 'perspective(700px) rotateY(18deg) rotateZ(-10deg) skewY(-6deg) scale(1.6)',
+              transformOrigin: 'left center',
+              filter: 'blur(0.2px)',
+              width: '150%',
+              height: '115%',
+              top: '-3%',
+              left: '-18%',
+              maskImage: 'radial-gradient(ellipse 130% 110% at left center, black 55%, transparent 88%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 130% 110% at left center, black 55%, transparent 88%)',
+            }}
+          />
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-600 dark:text-gray-400">🛫 Airline</span>
-          <span className="font-medium text-gray-900 dark:text-white text-right max-w-[60%] truncate">
-            {result.airlines}
-          </span>
+      </div>
+
+      <div className="relative z-10">
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">
+                #{rank}
+              </span>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {result.city}
+                </h3>
+                <p className="text-base text-gray-600 dark:text-gray-400">
+                  {result.country} ({result.airport})
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="text-right ml-4">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
+              {result.currency} {result.flight_price.toFixed(2)}
+            </div>
+            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+              Score: {result.score.toFixed(1)}
+            </div>
+          </div>
         </div>
-        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            <div>Departure: {new Date(result.best_departure).toLocaleDateString()}</div>
-            <div>Return: {new Date(result.best_return).toLocaleDateString()}</div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <span className="text-gray-600 dark:text-gray-400 block mb-1">🌡️ Temperature</span>
+            <span className="font-semibold text-gray-900 dark:text-white text-base">
+              {result.avg_temp_c.toFixed(1)}°C
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-600 dark:text-gray-400 block mb-1">🌧️ Rainfall</span>
+            <span className="font-semibold text-gray-900 dark:text-white text-base">
+              {result.avg_precip_mm_per_day.toFixed(2)} mm/day
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-600 dark:text-gray-400 block mb-1">✈️ Stops</span>
+            <span className="font-semibold text-gray-900 dark:text-white text-base">
+              {result.total_stops === 0 ? 'Direct' : `${result.total_stops} stop(s)`}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-600 dark:text-gray-400 block mb-1">🛫 Airline</span>
+            <span className="font-semibold text-gray-900 dark:text-white text-base truncate block">
+              {result.airlines}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex gap-6 text-base font-semibold text-gray-900 dark:text-white">
+            <div>
+              ✈️ Departure: <span className="text-indigo-600 dark:text-indigo-400">{new Date(result.best_departure).toLocaleDateString()}</span>
+            </div>
+            <div>
+              🔄 Return: <span className="text-indigo-600 dark:text-indigo-400">{new Date(result.best_return).toLocaleDateString()}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ListDestinationCard({ result, rank }: { result: SearchResult; rank: number }) {
+  const countryCode = getCountryCode(result.country);
+  const flagUrl = getFlagUrl(countryCode, 'w2560');
+
+  return (
+    <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
+      {/* Flag background - fluid wavy, attached on left, flowing NW to SE */}
+      <div className="absolute -left-6 top-0 bottom-0 w-32 opacity-30 dark:opacity-18 pointer-events-none" style={{ overflow: 'visible' }}>
+        <div 
+          className="w-full h-full relative"
+          style={{
+            animation: 'flagWaveList 7s ease-in-out infinite',
+            transformOrigin: 'left center',
+            maskImage: 'linear-gradient(to right, black 0%, black 88%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, black 0%, black 88%, transparent 100%)',
+          }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `url(${flagUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: '25% center',
+              backgroundRepeat: 'no-repeat',
+              transform: 'perspective(500px) rotateY(12deg) rotateZ(-6deg) skewY(-4deg) scale(1.4)',
+              transformOrigin: 'left center',
+              filter: 'blur(0.2px)',
+              width: '145%',
+              height: '108%',
+              top: '14%',
+              left: '-12%',
+              maskImage: 'radial-gradient(ellipse 115% 105% at left center, black 65%, transparent 92%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 115% 105% at left center, black 65%, transparent 92%)',
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="relative z-10 flex items-center justify-between">
+        <div className="flex items-center gap-4 flex-1">
+          <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400 min-w-[3rem]">
+            #{rank}
+          </span>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {result.city}, {result.country}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {result.airport} • 🌡️ {result.avg_temp_c.toFixed(1)}°C • 🌧️ {result.avg_precip_mm_per_day.toFixed(2)}mm/day
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-6 ml-4">
+          <div className="text-right">
+            <div className="text-lg font-bold text-green-600 dark:text-green-400">
+              {result.currency} {result.flight_price.toFixed(2)}
+            </div>
+            <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+              Score: {result.score.toFixed(1)}
+            </div>
+          </div>
+          
+          <div className="text-right min-w-[140px]">
+            <div className="text-sm font-medium text-gray-900 dark:text-white">
+              <div>✈️ {new Date(result.best_departure).toLocaleDateString()}</div>
+              <div>🔄 {new Date(result.best_return).toLocaleDateString()}</div>
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              {result.total_stops === 0 ? 'Direct' : `${result.total_stops} stop(s)`} • {result.airlines}
+            </div>
           </div>
         </div>
       </div>
