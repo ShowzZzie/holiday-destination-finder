@@ -136,8 +136,10 @@ def search_destinations(
 
     if os.getenv("RENDER") == "true":
         CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities_web.csv"
+        print(f"[main] Using web cities file: cities_web.csv")
     else:
         CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities_local.csv"
+        print(f"[main] Using local cities file: cities_local.csv")
 
     with open(CITIES_CSV, newline="", encoding="utf-8") as fh:
         total = sum(1 for _ in fh) - 1  # subtract header
