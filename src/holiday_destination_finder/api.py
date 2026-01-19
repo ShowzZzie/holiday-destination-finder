@@ -4,6 +4,7 @@ import json
 import threading
 
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .kv_queue import enqueue, get_job
@@ -24,6 +25,15 @@ class SearchResult(BaseModel):
     score: float
 
 app = FastAPI(title="Holiday Destination Finder API")
+
+# Enable CORS for frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific frontend URLs
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.on_event("startup")
 def start_embedded_worker():
