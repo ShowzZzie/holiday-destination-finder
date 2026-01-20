@@ -3,14 +3,118 @@ Lisbon,Portugal,38.7077,-9.1363,LIS,PT,EU,Iberia,Humberto Delgado Airport
 Madrid,Spain,40.4168,-3.7038,MAD,ES,EU,Iberia,Adolfo Suarez Madrid-Barajas Airport
 Valencia,Spain,39.4699,-0.3763,VLC,ES,EU,Iberia,Valencia Airport
 Malaga,Spain,36.7212,-4.4214,AGP,ES,EU,Iberia,Málaga-Costa del Sol Airport
+Barcelona,Spain,41.3851,2.1734,BCN,ES,EU,Iberia,Josep Tarradellas Barcelona-El Prat Airport
+Seville,Spain,37.3891,-5.9845,SVQ,ES,EU,Iberia,Seville Airport
+Bilbao,Spain,43.2627,-2.9253,BIO,ES,EU,Iberia,Bilbao Airport
+Palma,Spain,39.5696,2.6502,PMI,ES,EU,Iberia,Palma de Mallorca Airport
+Alicante,Spain,38.3452,-0.4810,ALC,ES,EU,Iberia,Alicante-Elche Airport
+Granada,Spain,37.1773,-3.5986,GRX,ES,EU,Iberia,Federico Garcia Lorca Granada Airport
+Porto,Portugal,41.1579,-8.6291,OPO,PT,EU,Iberia,Francisco de Sá Carneiro Airport
+Faro,Portugal,37.0194,-7.9322,FAO,PT,EU,Iberia,Faro Airport
 Rome,Italy,41.9029,12.4964,FCO,IT,EU,Southern_Europe,Leonardo da Vinci-Fiumicino Airport
-Rome,Italy,41.8025,12.2555,CIA,IT,EU,Southern_Europe,Rome Ciampino Airport
+Rome,Italy,41.9029,12.4964,CIA,IT,EU,Southern_Europe,Rome Ciampino Airport
+Milan,Italy,45.4642,9.1900,MXP,IT,EU,Southern_Europe,Milan Malpensa Airport
+Milan,Italy,45.4642,9.1900,LIN,IT,EU,Southern_Europe,Milan Linate Airport
+Venice,Italy,45.4408,12.3155,VCE,IT,EU,Southern_Europe,Venice Marco Polo Airport
+Naples,Italy,40.8518,14.2681,NAP,IT,EU,Southern_Europe,Naples International Airport
 Catania,Italy,37.4922,15.0700,CTA,IT,EU,Southern_Europe,Catania-Fontanarossa Airport
+Florence,Italy,43.7696,11.2558,FLR,IT,EU,Southern_Europe,Florence Airport
+Bologna,Italy,44.4949,11.3426,BLQ,IT,EU,Southern_Europe,Bologna Guglielmo Marconi Airport
+Turin,Italy,45.0703,7.6869,TRN,IT,EU,Southern_Europe,Turin Airport
+Palermo,Italy,38.1157,13.3613,PMO,IT,EU,Southern_Europe,Palermo Airport
+Bari,Italy,41.1177,16.8719,BRI,IT,EU,Southern_Europe,Bari Karol Wojtyła Airport
+Athens,Greece,37.9838,23.7275,ATH,GR,EU,Southern_Europe,Athens International Airport
+Thessaloniki,Greece,40.6401,22.9444,SKG,GR,EU,Southern_Europe,Thessaloniki Airport
 Santorini,Greece,36.3932,25.4615,JTR,GR,EU,Southern_Europe,Santorini Airport
+Mykonos,Greece,37.4467,25.3289,JMK,GR,EU,Southern_Europe,Mykonos Airport
+Crete,Greece,35.2401,24.8093,HER,GR,EU,Southern_Europe,Heraklion International Airport
+Rhodes,Greece,36.4412,28.2229,RHO,GR,EU,Southern_Europe,Rhodes International Airport
 Dubrovnik,Croatia,42.6418,18.0948,DBV,HR,EU,Southern_Europe,Dubrovnik Airport
+Split,Croatia,43.5081,16.4402,SPU,HR,EU,Southern_Europe,Split Airport
+Zagreb,Croatia,45.8150,15.9819,ZAG,HR,EU,Southern_Europe,Zagreb Airport
+Ljubljana,Slovenia,46.0569,14.5058,LJU,SI,EU,Southern_Europe,Ljubljana Jože Pučnik Airport
+Belgrade,Serbia,44.7866,20.4489,BEG,RS,EU,Southern_Europe,Belgrade Nikola Tesla Airport
+Sarajevo,Bosnia and Herzegovina,43.8563,18.4131,SJJ,BA,EU,Southern_Europe,Sarajevo International Airport
+Podgorica,Montenegro,42.4304,19.2594,TGD,ME,EU,Southern_Europe,Podgorica Airport
+Tirana,Albania,41.3275,19.8187,TIA,AL,EU,Southern_Europe,Tirana International Airport
+Paris,France,48.8566,2.3522,CDG,FR,EU,Western_Europe,Charles de Gaulle Airport
+Paris,France,48.8566,2.3522,ORY,FR,EU,Western_Europe,Paris Orly Airport
+Lyon,France,45.7640,4.8357,LYS,FR,EU,Western_Europe,Lyon-Saint Exupéry Airport
+Marseille,France,43.2965,5.3698,MRS,FR,EU,Western_Europe,Marseille Provence Airport
+Nice,France,43.7102,7.2620,NCE,FR,EU,Western_Europe,Nice Côte d'Azur Airport
+Bordeaux,France,44.8378,-0.5792,BOD,FR,EU,Western_Europe,Bordeaux-Mérignac Airport
+Toulouse,France,43.6047,1.4442,TLS,FR,EU,Western_Europe,Toulouse-Blagnac Airport
+Nantes,France,47.2184,-1.5536,NTE,FR,EU,Western_Europe,Nantes Atlantique Airport
+Strasbourg,France,48.5734,7.7521,SXB,FR,EU,Western_Europe,Strasbourg Airport
+Frankfurt,Germany,50.1109,8.6821,FRA,DE,EU,Western_Europe,Frankfurt Airport
+Munich,Germany,48.1351,11.5820,MUC,DE,EU,Western_Europe,Munich Airport
+Berlin,Germany,52.5200,13.4050,BER,DE,EU,Western_Europe,Berlin Brandenburg Airport
+Hamburg,Germany,53.5511,9.9937,HAM,DE,EU,Western_Europe,Hamburg Airport
+Cologne,Germany,50.9375,6.9603,CGN,DE,EU,Western_Europe,Cologne Bonn Airport
+Stuttgart,Germany,48.7758,9.1829,STR,DE,EU,Western_Europe,Stuttgart Airport
+Düsseldorf,Germany,51.2277,6.7735,DUS,DE,EU,Western_Europe,Düsseldorf Airport
+Amsterdam,Netherlands,52.3676,4.9041,AMS,NL,EU,Western_Europe,Amsterdam Airport Schiphol
+Rotterdam,Netherlands,51.9244,4.4777,RTM,NL,EU,Western_Europe,Rotterdam The Hague Airport
+Eindhoven,Netherlands,51.4416,5.4697,EIN,NL,EU,Western_Europe,Eindhoven Airport
+Brussels,Belgium,50.8503,4.3517,BRU,BE,EU,Western_Europe,Brussels Airport
+Antwerp,Belgium,51.2194,4.4025,ANR,BE,EU,Western_Europe,Antwerp International Airport
+Zurich,Switzerland,47.3769,8.5417,ZRH,CH,EU,Western_Europe,Zurich Airport
+Geneva,Switzerland,46.2044,6.1432,GVA,CH,EU,Western_Europe,Geneva Airport
+Basel,Switzerland,47.5596,7.5886,BSL,CH,EU,Western_Europe,EuroAirport Basel-Mulhouse-Freiburg
+Vienna,Austria,48.2082,16.3738,VIE,AT,EU,Western_Europe,Vienna International Airport
+Salzburg,Austria,47.8095,13.0550,SZG,AT,EU,Western_Europe,Salzburg Airport
+Innsbruck,Austria,47.2692,11.4041,INN,AT,EU,Western_Europe,Innsbruck Airport
+Luxembourg,Luxembourg,49.6116,6.1319,LUX,LU,EU,Western_Europe,Luxembourg Airport
+London,United Kingdom,51.5074,-0.1278,LHR,GB,EU,Northern_Europe,London Heathrow Airport
+London,United Kingdom,51.5074,-0.1278,LGW,GB,EU,Northern_Europe,London Gatwick Airport
+London,United Kingdom,51.5074,-0.1278,STN,GB,EU,Northern_Europe,London Stansted Airport
+London,United Kingdom,51.5074,-0.1278,LTN,GB,EU,Northern_Europe,London Luton Airport
+Manchester,United Kingdom,53.4808,-2.2426,MAN,GB,EU,Northern_Europe,Manchester Airport
+Edinburgh,United Kingdom,55.9533,-3.1883,EDI,GB,EU,Northern_Europe,Edinburgh Airport
+Birmingham,United Kingdom,52.4862,-1.8904,BHX,GB,EU,Northern_Europe,Birmingham Airport
+Glasgow,United Kingdom,55.8642,-4.2518,GLA,GB,EU,Northern_Europe,Glasgow Airport
+Bristol,United Kingdom,51.4545,-2.5879,BRS,GB,EU,Northern_Europe,Bristol Airport
+Dublin,Ireland,53.3498,-6.2603,DUB,IE,EU,Northern_Europe,Dublin Airport
+Cork,Ireland,51.8985,-8.4756,ORK,IE,EU,Northern_Europe,Cork Airport
+Shannon,Ireland,52.7039,-8.8642,SNN,IE,EU,Northern_Europe,Shannon Airport
+Copenhagen,Denmark,55.6761,12.5683,CPH,DK,EU,Northern_Europe,Copenhagen Airport
+Aarhus,Denmark,56.1629,10.2039,AAR,DK,EU,Northern_Europe,Aarhus Airport
+Billund,Denmark,55.7400,9.1519,BLL,DK,EU,Northern_Europe,Billund Airport
+Stockholm,Sweden,59.3293,18.0686,ARN,SE,EU,Northern_Europe,Stockholm Arlanda Airport
+Stockholm,Sweden,59.3293,18.0686,BMA,SE,EU,Northern_Europe,Stockholm Bromma Airport
+Gothenburg,Sweden,57.7089,11.9746,GOT,SE,EU,Northern_Europe,Gothenburg Landvetter Airport
+Malmö,Sweden,55.6059,13.0007,MMX,SE,EU,Northern_Europe,Malmö Airport
+Oslo,Norway,59.9139,10.7522,OSL,NO,EU,Northern_Europe,Oslo Gardermoen Airport
+Bergen,Norway,60.3913,5.3221,BGO,NO,EU,Northern_Europe,Bergen Airport
+Tromsø,Norway,69.6492,18.9553,TOS,NO,EU,Northern_Europe,Tromsø Airport
+Helsinki,Finland,60.1699,24.9384,HEL,FI,EU,Northern_Europe,Helsinki-Vantaa Airport
+Reykjavik,Iceland,64.1466,-21.9426,KEF,IS,EU,Northern_Europe,Keflavík International Airport
+Warsaw,Poland,52.2297,21.0122,WAW,PL,EU,Eastern_Europe,Warsaw Chopin Airport
+Warsaw,Poland,52.2297,21.0122,WMI,PL,EU,Eastern_Europe,Warsaw Modlin Airport
+Krakow,Poland,50.0647,19.9450,KRK,PL,EU,Eastern_Europe,John Paul II International Airport Kraków-Balice
+Gdansk,Poland,54.3520,18.6466,GDN,PL,EU,Eastern_Europe,Gdańsk Lech Wałęsa Airport
+Wroclaw,Poland,51.1079,17.0385,WRO,PL,EU,Eastern_Europe,Wrocław Nicolaus Copernicus Airport
+Poznan,Poland,52.4064,16.9252,POZ,PL,EU,Eastern_Europe,Poznań-Ławica Airport
+Prague,Czech Republic,50.0755,14.4378,PRG,CZ,EU,Eastern_Europe,Václav Havel Airport Prague
+Brno,Czech Republic,49.1951,16.6068,BRQ,CZ,EU,Eastern_Europe,Brno-Tuřany Airport
+Budapest,Hungary,47.4979,19.0402,BUD,HU,EU,Eastern_Europe,Budapest Ferenc Liszt International Airport
+Bucharest,Romania,44.4268,26.1025,OTP,RO,EU,Eastern_Europe,Henri Coandă International Airport
+Cluj-Napoca,Romania,46.7712,23.6236,CLJ,RO,EU,Eastern_Europe,Cluj-Napoca International Airport
+Sofia,Bulgaria,42.6977,23.3219,SOF,BG,EU,Eastern_Europe,Sofia Airport
+Varna,Bulgaria,43.2141,27.9147,VAR,BG,EU,Eastern_Europe,Varna Airport
+Burgas,Bulgaria,42.5048,27.4626,BOJ,BG,EU,Eastern_Europe,Burgas Airport
+Bratislava,Slovakia,48.1486,17.1077,BTS,SK,EU,Eastern_Europe,M. R. Štefánik Airport
+Vilnius,Lithuania,54.6872,25.2797,VNO,LT,EU,Eastern_Europe,Vilnius Airport
+Riga,Latvia,56.9496,24.1052,RIX,LV,EU,Eastern_Europe,Riga International Airport
+Tallinn,Estonia,59.4370,24.7536,TLL,EE,EU,Eastern_Europe,Tallinn Airport
+Kiev,Ukraine,50.4501,30.5234,KBP,UA,EU,Eastern_Europe,Boryspil International Airport
+Istanbul,Turkey,41.0082,28.9784,IST,TR,EU,Southern_Europe,Istanbul Airport
+Istanbul,Turkey,41.0082,28.9784,SAW,TR,EU,Southern_Europe,Istanbul Sabiha Gökçen Airport
+Antalya,Turkey,36.8969,30.7133,AYT,TR,EU,Southern_Europe,Antalya Airport
+Izmir,Turkey,38.4237,27.1428,ADB,TR,EU,Southern_Europe,İzmir Adnan Menderes Airport
+Bodrum,Turkey,37.0344,27.4305,BJV,TR,EU,Southern_Europe,Milas-Bodrum Airport
 Bangkok,Thailand,13.7563,100.5018,BKK,TH,AS,Southeast_Asia,Suvarnabhumi Airport
 Bangkok,Thailand,13.7563,100.5018,DMK,TH,AS,Southeast_Asia,Don Mueang International Airport
-Florence,Italy,43.7696,11.2558,FLR,IT,EU,Southern_Europe,Florence Airport
 New York,USA,40.7128,-74.0060,JFK,US,NA,North_America,John F. Kennedy International Airport
 New York,USA,40.7128,-74.0060,LGA,US,NA,North_America,LaGuardia Airport
 New York,USA,40.7128,-74.0060,EWR,US,NA,North_America,Newark Liberty International Airport

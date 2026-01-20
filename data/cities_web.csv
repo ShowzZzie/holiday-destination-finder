@@ -1,16 +1,43 @@
 city,country,lat,lon,airport,country_code,continent,region,airport_name
 Lisbon,Portugal,38.7077,-9.1363,LIS,PT,EU,Iberia,Humberto Delgado Airport
+Porto,Portugal,41.1579,-8.6291,OPO,PT,EU,Iberia,Francisco de Sá Carneiro Airport
 Madrid,Spain,40.4168,-3.7038,MAD,ES,EU,Iberia,Adolfo Suarez Madrid-Barajas Airport
 Valencia,Spain,39.4699,-0.3763,VLC,ES,EU,Iberia,Valencia Airport
 Malaga,Spain,36.7212,-4.4214,AGP,ES,EU,Iberia,Málaga-Costa del Sol Airport
+Barcelona,Spain,41.3851,2.1734,BCN,ES,EU,Iberia,Josep Tarradellas Barcelona-El Prat Airport
+Seville,Spain,37.3891,-5.9845,SVQ,ES,EU,Iberia,Seville Airport
+Palma,Spain,39.5696,2.6502,PMI,ES,EU,Iberia,Palma de Mallorca Airport
 Rome,Italy,41.9029,12.4964,FCO,IT,EU,Southern_Europe,Leonardo da Vinci-Fiumicino Airport
-Rome,Italy,41.8025,12.2555,CIA,IT,EU,Southern_Europe,Rome Ciampino Airport
+Rome,Italy,41.9029,12.4964,CIA,IT,EU,Southern_Europe,Rome Ciampino Airport
+Milan,Italy,45.4642,9.1900,MXP,IT,EU,Southern_Europe,Milan Malpensa Airport
+Milan,Italy,45.4642,9.1900,LIN,IT,EU,Southern_Europe,Milan Linate Airport
+Venice,Italy,45.4408,12.3155,VCE,IT,EU,Southern_Europe,Venice Marco Polo Airport
+Naples,Italy,40.8518,14.2681,NAP,IT,EU,Southern_Europe,Naples International Airport
 Catania,Italy,37.4922,15.0700,CTA,IT,EU,Southern_Europe,Catania-Fontanarossa Airport
-Santorini,Greece,36.3932,25.4615,JTR,GR,EU,Southern_Europe,Santorini Airport
-Dubrovnik,Croatia,42.6418,18.0948,DBV,HR,EU,Southern_Europe,Dubrovnik Airport
-Bangkok,Thailand,13.7563,100.5018,BKK,TH,AS,Southeast_Asia,Suvarnabhumi Airport
-Bangkok,Thailand,13.7563,100.5018,DMK,TH,AS,Southeast_Asia,Don Mueang International Airport
 Florence,Italy,43.7696,11.2558,FLR,IT,EU,Southern_Europe,Florence Airport
-New York,USA,40.7128,-74.0060,JFK,US,NA,North_America,John F. Kennedy International Airport
-New York,USA,40.7128,-74.0060,LGA,US,NA,North_America,LaGuardia Airport
-New York,USA,40.7128,-74.0060,EWR,US,NA,North_America,Newark Liberty International Airport
+Athens,Greece,37.9838,23.7275,ATH,GR,EU,Southern_Europe,Athens International Airport
+Santorini,Greece,36.3932,25.4615,JTR,GR,EU,Southern_Europe,Santorini Airport
+Mykonos,Greece,37.4467,25.3289,JMK,GR,EU,Southern_Europe,Mykonos Airport
+Crete,Greece,35.2401,24.8093,HER,GR,EU,Southern_Europe,Heraklion International Airport
+Rhodes,Greece,36.4412,28.2229,RHO,GR,EU,Southern_Europe,Rhodes International Airport
+Dubrovnik,Croatia,42.6418,18.0948,DBV,HR,EU,Southern_Europe,Dubrovnik Airport
+Split,Croatia,43.5081,16.4402,SPU,HR,EU,Southern_Europe,Split Airport
+Zagreb,Croatia,45.8150,15.9819,ZAG,HR,EU,Southern_Europe,Zagreb Airport
+Paris,France,48.8566,2.3522,CDG,FR,EU,Western_Europe,Charles de Gaulle Airport
+Paris,France,48.8566,2.3522,ORY,FR,EU,Western_Europe,Paris Orly Airport
+Lyon,France,45.7640,4.8357,LYS,FR,EU,Western_Europe,Lyon-Saint Exupéry Airport
+Marseille,France,43.2965,5.3698,MRS,FR,EU,Western_Europe,Marseille Provence Airport
+Nice,France,43.7102,7.2620,NCE,FR,EU,Western_Europe,Nice Côte d'Azur Airport
+Amsterdam,Netherlands,52.3676,4.9041,AMS,NL,EU,Western_Europe,Amsterdam Airport Schiphol
+Vienna,Austria,48.2082,16.3738,VIE,AT,EU,Western_Europe,Vienna International Airport
+Dublin,Ireland,53.3498,-6.2603,DUB,IE,EU,Northern_Europe,Dublin Airport
+London,United Kingdom,51.5074,-0.1278,LHR,GB,EU,Northern_Europe,London Heathrow Airport
+London,United Kingdom,51.5074,-0.1278,LGW,GB,EU,Northern_Europe,London Gatwick Airport
+London,United Kingdom,51.5074,-0.1278,STN,GB,EU,Northern_Europe,London Stansted Airport
+London,United Kingdom,51.5074,-0.1278,LTN,GB,EU,Northern_Europe,London Luton Airport
+Copenhagen,Denmark,55.6761,12.5683,CPH,DK,EU,Northern_Europe,Copenhagen Airport
+Oslo,Norway,59.9139,10.7522,OSL,NO,EU,Northern_Europe,Oslo Gardermoen Airport
+Stockholm,Sweden,59.3293,18.0686,ARN,SE,EU,Northern_Europe,Stockholm Arlanda Airport
+Stockholm,Sweden,59.3293,18.0686,BMA,SE,EU,Northern_Europe,Stockholm Bromma Airport
+Istanbul,Turkey,41.0082,28.9784,IST,TR,EU,Southern_Europe,Istanbul Airport
+Istanbul,Turkey,41.0082,28.9784,SAW,TR,EU,Southern_Europe,Istanbul Sabiha Gökçen Airport
