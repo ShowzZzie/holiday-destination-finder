@@ -7,7 +7,7 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from .kv_queue import enqueue, get_job, get_queue_position
+from .kv_queue import enqueue, get_job, get_queue_position, cancel_job
 from .worker import main as worker_main  # your existing worker loop
 
 class SearchResult(BaseModel):
@@ -101,3 +101,10 @@ def job(job_id: str):
         out["error"] = data["error"]
     
     return out
+
+@app.post("/jobs/{job_id}/cancel")
+def cancel(job_id: str):
+    success = cancel_job(job_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Job not found or cannot be cancelled")
+    return {"status": "cancelled", "job_id": job_id}

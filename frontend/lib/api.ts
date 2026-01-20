@@ -90,3 +90,14 @@ export async function checkHealth(): Promise<boolean> {
     return false;
   }
 }
+
+export async function cancelJob(jobId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/cancel`, {
+    method: 'POST',
+  });
+  
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to cancel job: ${error}`);
+  }
+}

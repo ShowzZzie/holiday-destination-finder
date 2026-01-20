@@ -67,3 +67,26 @@ def get_queue_position(job_id: str) -> int | None:
         # Log error for debugging but don't break the API
         print(f"[kv_queue] Error getting queue position: {e}")
         return None
+
+def cancel_job(job_id: str) -> bool:
+    """Cancel a job by removing it from queue and marking it as cancelled. Returns True if cancelled."""
+    try:
+        # Remove from queue if present
+        r.lrem(QUEUE, 0, job_id)
+        
+        # Check if job exists
+        job_key = f"job:{job_id}"
+        if not r.exists(job_key):
+            return False
+        
+        # Mark as cancelled (unless already done/failed)
+        status = r.hget(job_key, "status")
+        if status in ("queued", "running"):
+            r.hset(job_key, mapping={"status": "cancelled"})
+            r.expire(job_key, JOB_TTL_S)
+            return True
+        
+        return False
+    except Exception as e:
+        print(f"[kv_queue] Error cancelling job {job_id}: {e}")
+        return False

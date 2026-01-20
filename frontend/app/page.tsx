@@ -2,10 +2,49 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { startSearch, getJobStatus, checkHealth, SearchParams, JobStatus, SearchResult } from '@/lib/api';
+import { startSearch, getJobStatus, checkHealth, cancelJob, SearchParams, JobStatus, SearchResult } from '@/lib/api';
 import { getCountryCode, getFlagUrl } from '@/lib/country-flags';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+
+// Helper function to get airline logo URL
+function getAirlineLogoUrl(airlineName: string): string | null {
+  const normalized = airlineName.toLowerCase();
+  if (normalized.includes('ryanair') || normalized.includes('fr')) {
+    // Ryanair logo from SimpleIcons or a CDN
+    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/ryanair.svg';
+  }
+  if (normalized.includes('wizz') || normalized.includes('w6')) {
+    // Wizz Air logo from SimpleIcons or a CDN
+    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/wizzair.svg';
+  }
+  return null;
+}
+
+// Component to render airline name with optional logo
+function AirlineDisplay({ airlines }: { airlines: string }) {
+  const logoUrl = getAirlineLogoUrl(airlines);
+  
+  if (logoUrl) {
+    return (
+      <span className="flex items-center gap-1.5">
+        <Image 
+          src={logoUrl}
+          alt={airlines}
+          width={16}
+          height={16}
+          className="inline-block"
+          style={{ filter: 'invert(1)', opacity: 0.8 }}
+        />
+        <span>{airlines}</span>
+      </span>
+    );
+  }
+  
+  return <span>{airlines}</span>;
+}
 
 export default function Home() {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState<SearchParams>({
     origin: 'WRO',
     start: '',
@@ -19,11 +58,84 @@ export default function Home() {
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isApiHealthy, setIsApiHealthy] = useState<boolean | null>(null);
+  const [jobHistory, setJobHistory] = useState<Array<{ jobId: string; origin: string; start: string; end: string }>>([]);
+  const [validJobIds, setValidJobIds] = useState<Set<string>>(new Set());
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Check API health on mount
   useEffect(() => {
     checkHealth().then(setIsApiHealthy);
   }, []);
+
+  // Load job history from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('jobHistory');
+    if (saved) {
+      try {
+        const history = JSON.parse(saved);
+        setJobHistory(history);
+        // Validate all jobs on mount
+        validateJobs(history);
+      } catch (e) {
+        console.error('Failed to parse job history:', e);
+      }
+    }
+  }, []);
+
+  // Validate jobs by checking if they exist
+  const validateJobs = async (jobs: Array<{ jobId: string; origin: string; start: string; end: string }>) => {
+    const validIds = new Set<string>();
+    await Promise.all(
+      jobs.map(async (job) => {
+        try {
+          await getJobStatus(job.jobId);
+          validIds.add(job.jobId);
+        } catch (err) {
+          // Job not found (404) or other error - exclude from valid set
+          console.log(`Job ${job.jobId} not found, removing from sidebar`);
+        }
+      })
+    );
+    setValidJobIds(validIds);
+  };
+
+  // Save job ID with metadata to history when a new job is created
+  useEffect(() => {
+    if (jobStatus?.job_id && jobStatus?.payload?.meta) {
+      const meta = jobStatus.payload.meta;
+      setJobHistory(prev => {
+        const newEntry = {
+          jobId: jobStatus.job_id,
+          origin: meta.origin || 'N/A',
+          start: meta.start || 'N/A',
+          end: meta.end || 'N/A',
+        };
+        const updated = [
+          newEntry,
+          ...prev.filter(item => item.jobId !== jobStatus.job_id)
+        ].slice(0, 20); // Keep last 20
+        localStorage.setItem('jobHistory', JSON.stringify(updated));
+        return updated;
+      });
+    } else if (jobStatus?.job_id && formData.origin && formData.start && formData.end) {
+      // Fallback: use current form data if meta is not available yet
+      setJobHistory(prev => {
+        const newEntry = {
+          jobId: jobStatus.job_id,
+          origin: formData.origin,
+          start: formData.start,
+          end: formData.end,
+        };
+        const updated = [
+          newEntry,
+          ...prev.filter(item => item.jobId !== jobStatus.job_id)
+        ].slice(0, 20); // Keep last 20
+        localStorage.setItem('jobHistory', JSON.stringify(updated));
+        return updated;
+      });
+    }
+  }, [jobStatus?.job_id, jobStatus?.payload?.meta, formData.origin, formData.start, formData.end]);
 
   // Poll job status when job is active
   useEffect(() => {
@@ -68,8 +180,28 @@ export default function Home() {
       const response = await startSearch(formData);
       console.log('🔍 Search Job Created - Job ID:', response.job_id);
       console.log('📍 Direct API URL:', `${process.env.NEXT_PUBLIC_API_URL || 'https://holiday-destination-finder.onrender.com'}/jobs/${response.job_id}`);
+      
+      // Save to history immediately with form data
+      setJobHistory(prev => {
+        const newEntry = {
+          jobId: response.job_id,
+          origin: formData.origin,
+          start: formData.start,
+          end: formData.end,
+        };
+        const updated = [
+          newEntry,
+          ...prev.filter(item => item.jobId !== response.job_id)
+        ].slice(0, 20); // Keep last 20
+        localStorage.setItem('jobHistory', JSON.stringify(updated));
+        // Mark this job as valid
+        setValidJobIds(prev => new Set([...prev, response.job_id]));
+        return updated;
+      });
+      
       const initialStatus = await getJobStatus(response.job_id);
       setJobStatus(initialStatus);
+      setSelectedJobId(response.job_id);
       
       // If job is already done/failed, reset searching state
       if (initialStatus.status === 'done' || initialStatus.status === 'failed') {
@@ -78,6 +210,60 @@ export default function Home() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start search');
       setIsSearching(false);
+    }
+  };
+
+  const handleJobSelect = async (jobId: string) => {
+    setSelectedJobId(jobId);
+    setError(null);
+    try {
+      const status = await getJobStatus(jobId);
+      setJobStatus(status);
+      setIsSearching(status.status === 'queued' || status.status === 'running');
+      // Ensure job is marked as valid
+      setValidJobIds(prev => new Set([...prev, jobId]));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load job status';
+      // If job not found, remove from valid set and update history
+      if (errorMessage.includes('not found') || errorMessage.includes('404')) {
+        setValidJobIds(prev => {
+          const updated = new Set(prev);
+          updated.delete(jobId);
+          return updated;
+        });
+        // Remove from job history
+        setJobHistory(prev => {
+          const updated = prev.filter(item => item.jobId !== jobId);
+          localStorage.setItem('jobHistory', JSON.stringify(updated));
+          return updated;
+        });
+        if (selectedJobId === jobId) {
+          setJobStatus(null);
+          setSelectedJobId(null);
+        }
+      } else {
+        setError(errorMessage);
+        setJobStatus(null);
+      }
+    }
+  };
+
+  const handleJobReorder = (newOrder: Array<{ jobId: string; origin: string; start: string; end: string }>) => {
+    setJobHistory(newOrder);
+    localStorage.setItem('jobHistory', JSON.stringify(newOrder));
+  };
+
+  const handleCancelJob = async () => {
+    if (!jobStatus?.job_id) return;
+    
+    try {
+      await cancelJob(jobStatus.job_id);
+      // Refresh job status to see cancellation
+      const updatedStatus = await getJobStatus(jobStatus.job_id);
+      setJobStatus(updatedStatus);
+      setIsSearching(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel job');
     }
   };
 
@@ -113,18 +299,30 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex">
+      {/* Sidebar */}
+      <JobHistorySidebar 
+        jobHistory={jobHistory}
+        validJobIds={validJobIds}
+        selectedJobId={selectedJobId}
+        onJobSelect={handleJobSelect}
+        onReorder={handleJobReorder}
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+      />
+      
+      {/* Main Content */}
+      <div className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
         <header className="mb-8 text-center">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            ✈️ Holiday Destination Finder
+            ✈️ {t('title')}
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            Discover the perfect holiday destination based on flight prices and weather
+            {t('subtitle')}
           </p>
           {isApiHealthy === false && (
             <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-300 rounded-lg inline-block">
-              ⚠️ API server is not reachable. Please ensure the backend is running.
+              {t('apiUnreachable')}
             </div>
           )}
         </header>
@@ -134,14 +332,14 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label htmlFor="origin" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Origin Airport (IATA)
+                  {t('origin')}
                 </label>
                 <input
                   type="text"
                   id="origin"
                   value={formData.origin}
                   onChange={(e) => setFormData({ ...formData, origin: e.target.value.toUpperCase() })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-400 autofill:bg-white autofill:text-gray-900"
                   placeholder="WRO"
                   maxLength={3}
                   required
@@ -151,14 +349,14 @@ export default function Home() {
 
               <div>
                 <label htmlFor="start" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Start Date
+                  {t('startDate')}
                 </label>
                 <input
                   type="date"
                   id="start"
                   value={formData.start}
                   onChange={(e) => setFormData({ ...formData, start: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-60"
                   required
                   disabled={isSearching}
                 />
@@ -166,14 +364,14 @@ export default function Home() {
 
               <div>
                 <label htmlFor="end" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  End Date
+                  {t('endDate')}
                 </label>
                 <input
                   type="date"
                   id="end"
                   value={formData.end}
                   onChange={(e) => setFormData({ ...formData, end: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-60"
                   required
                   disabled={isSearching}
                 />
@@ -181,14 +379,14 @@ export default function Home() {
 
               <div>
                 <label htmlFor="trip_length" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Trip Length (days)
+                  {t('tripLength')}
                 </label>
                 <input
                   type="number"
                   id="trip_length"
                   value={formData.trip_length}
                   onChange={(e) => setFormData({ ...formData, trip_length: parseInt(e.target.value) || 7 })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white"
                   min="1"
                   required
                   disabled={isSearching}
@@ -197,14 +395,14 @@ export default function Home() {
 
               <div>
                 <label htmlFor="top_n" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Top N Results
+                  {t('topN')}
                 </label>
                 <input
                   type="number"
                   id="top_n"
                   value={formData.top_n}
                   onChange={(e) => setFormData({ ...formData, top_n: parseInt(e.target.value) || 10 })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white"
                   min="1"
                   max="50"
                   required
@@ -215,7 +413,7 @@ export default function Home() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Flight Providers
+                {t('flightProviders')}
               </label>
               <div className="flex flex-wrap gap-4">
                 {['ryanair', 'wizzair', 'amadeus'].map(provider => (
@@ -246,13 +444,13 @@ export default function Home() {
               disabled={isSearching || formData.providers.length === 0}
               className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
             >
-              {isSearching ? 'Searching...' : 'Search Destinations'}
+              {isSearching ? t('searching') : t('searchDestinations')}
             </button>
           </form>
         </div>
 
         {jobStatus && (
-          <JobStatusDisplay jobStatus={jobStatus} />
+          <JobStatusDisplay jobStatus={jobStatus} onCancel={handleCancelJob} />
         )}
 
         {jobStatus?.status === 'done' && jobStatus.payload?.results && (
@@ -262,14 +460,14 @@ export default function Home() {
         {jobStatus?.status === 'done' && jobStatus.payload && !jobStatus.payload.results && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
             <p className="text-gray-600 dark:text-gray-400 text-center">
-              No destinations found. Try adjusting your search parameters.
+              {t('noDestinations')}
             </p>
           </div>
         )}
         
         {jobStatus?.status === 'failed' && jobStatus.error && (
           <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-300 rounded-lg p-4">
-            <h3 className="font-semibold mb-2">Search Failed</h3>
+            <h3 className="font-semibold mb-2">{t('searchFailed')}</h3>
             <p className="text-sm whitespace-pre-wrap">{jobStatus.error}</p>
           </div>
         )}
@@ -278,7 +476,9 @@ export default function Home() {
   );
 }
 
-function JobStatusDisplay({ jobStatus }: { jobStatus: JobStatus }) {
+function JobStatusDisplay({ jobStatus, onCancel }: { jobStatus: JobStatus; onCancel?: () => void }) {
+  const { t } = useLanguage();
+  
   if (jobStatus.status === 'done' || jobStatus.status === 'failed') {
     return null;
   }
@@ -289,26 +489,36 @@ function JobStatusDisplay({ jobStatus }: { jobStatus: JobStatus }) {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-        Search Progress
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          {t('searchProgress')}
+        </h2>
+        {onCancel && (jobStatus.status === 'queued' || jobStatus.status === 'running') && (
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
       <div className="space-y-3">
         <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-          <span>Status: <span className="font-medium capitalize">{jobStatus.status}</span></span>
+          <span>{t('status')}: <span className="font-medium capitalize">{jobStatus.status}</span></span>
           {jobStatus.total && jobStatus.processed !== undefined && (
             <span>
-              {jobStatus.processed} / {jobStatus.total} destinations
+              {jobStatus.processed} / {jobStatus.total} {t('destinations')}
             </span>
           )}
         </div>
         {jobStatus.status === 'queued' && jobStatus.queue_position !== undefined && (
           <div className="text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-            <span className="font-medium">Queue Position: </span>
+            <span className="font-medium">{t('queuePosition')}: </span>
             <span className="font-semibold text-blue-600 dark:text-blue-400">
               #{jobStatus.queue_position}
             </span>
             {jobStatus.queue_position === 1 && (
-              <span className="ml-2 text-xs">(Next in queue)</span>
+              <span className="ml-2 text-xs">({t('nextInQueue')})</span>
             )}
           </div>
         )}
@@ -322,7 +532,7 @@ function JobStatusDisplay({ jobStatus }: { jobStatus: JobStatus }) {
         )}
         {jobStatus.current && (
           <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-            Processing: {jobStatus.current}
+            {t('processing')}: {jobStatus.current}
           </p>
         )}
       </div>
@@ -330,12 +540,183 @@ function JobStatusDisplay({ jobStatus }: { jobStatus: JobStatus }) {
   );
 }
 
+function JobHistorySidebar({ 
+  jobHistory, 
+  validJobIds,
+  selectedJobId, 
+  onJobSelect,
+  onReorder,
+  open, 
+  onToggle 
+}: { 
+  jobHistory: Array<{ jobId: string; origin: string; start: string; end: string }>; 
+  validJobIds: Set<string>;
+  selectedJobId: string | null; 
+  onJobSelect: (jobId: string) => void;
+  onReorder: (newOrder: Array<{ jobId: string; origin: string; start: string; end: string }>) => void;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const { t } = useLanguage();
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // Filter to only show valid jobs
+  const validJobs = jobHistory.filter(job => validJobIds.has(job.jobId));
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr || dateStr === 'N/A') return dateStr;
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDropForValidJobs = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newOrder = [...validJobs];
+    const [removed] = newOrder.splice(draggedIndex, 1);
+    newOrder.splice(dropIndex, 0, removed);
+    
+    // Update the full job history order (maintaining valid jobs at the front)
+    const invalidJobs = jobHistory.filter(job => !validJobIds.has(job.jobId));
+    onReorder([...newOrder, ...invalidJobs]);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  return (
+    <>
+      {/* Sidebar Toggle Button - moves with sidebar */}
+      <button
+        onClick={onToggle}
+        className={`fixed top-24 z-40 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 ${
+          open ? 'left-[21rem]' : 'left-4'
+        }`}
+        aria-label="Toggle job history"
+      >
+        <svg className="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Sidebar */}
+      <div className={`fixed left-0 top-0 h-full w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-xl z-30 transform transition-transform duration-300 ease-in-out ${
+        open ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Job History</h3>
+          <button
+            onClick={onToggle}
+            className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            aria-label="Close sidebar"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex flex-col h-[calc(100vh-4rem)]">
+          <div className="overflow-y-auto flex-1 p-4">
+            {validJobs.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
+                No job history yet
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {validJobs.map((job, index) => (
+                  <div
+                    key={job.jobId}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDropForValidJobs(e, index)}
+                    onDragEnd={handleDragEnd}
+                    className={`cursor-move ${
+                      draggedIndex === index ? 'opacity-50' : ''
+                    } ${dragOverIndex === index ? 'border-t-2 border-indigo-500' : ''}`}
+                  >
+                    <button
+                      onClick={() => onJobSelect(job.jobId)}
+                      className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                        selectedJobId === job.jobId
+                          ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200'
+                          : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <div className="text-sm font-medium truncate">
+                          {job.origin} · {formatDate(job.start)} · {formatDate(job.end)}
+                        </div>
+                      </div>
+                      <div className="text-xs font-mono text-gray-500 dark:text-gray-400 truncate">{job.jobId}</div>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {jobHistory.length > validJobs.length && (
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                Some searches are not displayed because results have expired. Please run the query again to view them.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Overlay when sidebar is open */}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/20 dark:bg-black/40 z-20"
+          onClick={onToggle}
+        />
+      )}
+    </>
+  );
+}
+
 function ResultsDisplay({ results }: { results: SearchResult[] }) {
+  const { t } = useLanguage();
+  
   if (results.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
         <p className="text-gray-600 dark:text-gray-400 text-center">
-          No destinations found. Try adjusting your search parameters.
+          {t('noDestinations')}
         </p>
       </div>
     );
@@ -348,7 +729,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
       <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">
-        Top {results.length} Destinations
+        {t('topDestinations', { count: results.length })}
       </h2>
       
       <div className="space-y-6">
@@ -380,8 +761,10 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
 }
 
 function DestinationCard({ result, rank }: { result: SearchResult; rank: number }) {
+  const { t } = useLanguage();
   const countryCode = getCountryCode(result.country);
   const flagUrl = getFlagUrl(countryCode, 'w2560');
+  const isItaly = result.country === 'Italy';
 
   return (
     <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg p-5 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
@@ -399,15 +782,15 @@ function DestinationCard({ result, rank }: { result: SearchResult; rank: number 
             style={{
               background: `url(${flagUrl})`,
               backgroundSize: 'cover',
-              backgroundPosition: 'center center',
+              backgroundPosition: isItaly ? '30% center' : 'center center',
               backgroundRepeat: 'no-repeat',
               clipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)',
               WebkitClipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)',
               filter: 'blur(0px)',
-              width: '120%',
+              width: isItaly ? '140%' : '120%',
               height: '100%',
               top: '0%',
-              left: '14%',
+              left: isItaly ? '0%' : '14%',
               maskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
               WebkitMaskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
             }}
@@ -437,40 +820,40 @@ function DestinationCard({ result, rank }: { result: SearchResult; rank: number 
               {result.currency} {result.flight_price.toFixed(2)}
             </div>
             <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-              Score: {result.score.toFixed(1)}
+              {t('score')}: {result.score.toFixed(1)}
             </div>
           </div>
         </div>
 
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-gray-600 dark:text-gray-400">🌡️ Temperature</span>
+            <span className="text-gray-600 dark:text-gray-400">🌡️ {t('temperature')}</span>
             <span className="font-medium text-gray-900 dark:text-white">
               {result.avg_temp_c.toFixed(1)}°C
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-gray-600 dark:text-gray-400">🌧️ Rainfall</span>
+            <span className="text-gray-600 dark:text-gray-400">🌧️ {t('rainfall')}</span>
             <span className="font-medium text-gray-900 dark:text-white">
               {result.avg_precip_mm_per_day.toFixed(2)} mm/day
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-gray-600 dark:text-gray-400">✈️ Stops</span>
+            <span className="text-gray-600 dark:text-gray-400">✈️ {t('stops')}</span>
             <span className="font-medium text-gray-900 dark:text-white">
-              {result.total_stops === 0 ? 'Direct' : `${result.total_stops} stop(s)`}
+              {result.total_stops === 0 ? t('direct') : `${result.total_stops} ${result.total_stops === 1 ? t('stop') : t('stops')}`}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-gray-600 dark:text-gray-400">🛫 Airline</span>
-            <span className="font-medium text-gray-900 dark:text-white text-right max-w-[60%] truncate">
-              {result.airlines}
-            </span>
+            <span className="text-gray-600 dark:text-gray-400">🛫 {t('airline')}</span>
+            <div className="font-medium text-gray-900 dark:text-white text-right max-w-[60%] truncate">
+              <AirlineDisplay airlines={result.airlines} />
+            </div>
           </div>
           <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
             <div className="text-sm font-medium text-gray-900 dark:text-white">
-              <div>✈️ Departure: {new Date(result.best_departure).toLocaleDateString()}</div>
-              <div>🔄 Return: {new Date(result.best_return).toLocaleDateString()}</div>
+              <div>✈️ {t('departure')}: {new Date(result.best_departure).toLocaleDateString()}</div>
+              <div>🔄 {t('return')}: {new Date(result.best_return).toLocaleDateString()}</div>
             </div>
           </div>
         </div>
@@ -480,6 +863,7 @@ function DestinationCard({ result, rank }: { result: SearchResult; rank: number 
 }
 
 function WideDestinationCard({ result, rank }: { result: SearchResult; rank: number }) {
+  const { t } = useLanguage();
   const countryCode = getCountryCode(result.country);
   const flagUrl = getFlagUrl(countryCode, 'w2560');
 
@@ -498,13 +882,13 @@ function WideDestinationCard({ result, rank }: { result: SearchResult; rank: num
             className="absolute"
             style={{
               background: `url(${flagUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center center',
+              backgroundSize: 'contain',
+              backgroundPosition: 'left center',
               backgroundRepeat: 'no-repeat',
               clipPath: 'polygon(0 0, 80% 0, 95% 100%, 0 100%)',
               WebkitClipPath: 'polygon(0 0, 80% 0, 95% 100%, 0 100%)',
               filter: 'blur(0px)',
-              width: '125%',
+              width: '180%',
               height: '100%',
               top: '0%',
               left: '0%',
@@ -537,45 +921,45 @@ function WideDestinationCard({ result, rank }: { result: SearchResult; rank: num
               {result.currency} {result.flight_price.toFixed(2)}
             </div>
             <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-              Score: {result.score.toFixed(1)}
+              {t('score')}: {result.score.toFixed(1)}
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
-            <span className="text-gray-600 dark:text-gray-400 block mb-1">🌡️ Temperature</span>
+            <span className="text-gray-600 dark:text-gray-400 block mb-1">🌡️ {t('temperature')}</span>
             <span className="font-semibold text-gray-900 dark:text-white text-base">
               {result.avg_temp_c.toFixed(1)}°C
             </span>
           </div>
           <div>
-            <span className="text-gray-600 dark:text-gray-400 block mb-1">🌧️ Rainfall</span>
+            <span className="text-gray-600 dark:text-gray-400 block mb-1">🌧️ {t('rainfall')}</span>
             <span className="font-semibold text-gray-900 dark:text-white text-base">
               {result.avg_precip_mm_per_day.toFixed(2)} mm/day
             </span>
           </div>
           <div>
-            <span className="text-gray-600 dark:text-gray-400 block mb-1">✈️ Stops</span>
+            <span className="text-gray-600 dark:text-gray-400 block mb-1">✈️ {t('stops')}</span>
             <span className="font-semibold text-gray-900 dark:text-white text-base">
-              {result.total_stops === 0 ? 'Direct' : `${result.total_stops} stop(s)`}
+              {result.total_stops === 0 ? t('direct') : `${result.total_stops} ${result.total_stops === 1 ? t('stop') : t('stops')}`}
             </span>
           </div>
           <div>
-            <span className="text-gray-600 dark:text-gray-400 block mb-1">🛫 Airline</span>
-            <span className="font-semibold text-gray-900 dark:text-white text-base truncate block">
-              {result.airlines}
-            </span>
+            <span className="text-gray-600 dark:text-gray-400 block mb-1">🛫 {t('airline')}</span>
+            <div className="font-semibold text-gray-900 dark:text-white text-base truncate block">
+              <AirlineDisplay airlines={result.airlines} />
+            </div>
           </div>
         </div>
 
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex gap-6 text-base font-semibold text-gray-900 dark:text-white">
             <div>
-              ✈️ Departure: <span className="text-indigo-600 dark:text-indigo-400">{new Date(result.best_departure).toLocaleDateString()}</span>
+              ✈️ {t('departure')}: <span className="text-indigo-600 dark:text-indigo-400">{new Date(result.best_departure).toLocaleDateString()}</span>
             </div>
             <div>
-              🔄 Return: <span className="text-indigo-600 dark:text-indigo-400">{new Date(result.best_return).toLocaleDateString()}</span>
+              🔄 {t('return')}: <span className="text-indigo-600 dark:text-indigo-400">{new Date(result.best_return).toLocaleDateString()}</span>
             </div>
           </div>
         </div>
@@ -585,6 +969,7 @@ function WideDestinationCard({ result, rank }: { result: SearchResult; rank: num
 }
 
 function ListDestinationCard({ result, rank }: { result: SearchResult; rank: number }) {
+  const { t } = useLanguage();
   const countryCode = getCountryCode(result.country);
   const flagUrl = getFlagUrl(countryCode, 'w2560');
 
@@ -603,14 +988,14 @@ function ListDestinationCard({ result, rank }: { result: SearchResult; rank: num
             className="absolute"
             style={{
               background: `url(${flagUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center center',
+              backgroundSize: 'contain',
+              backgroundPosition: 'left center',
               backgroundRepeat: 'no-repeat',
               filter: 'blur(0px)',
-              width: '100%',
+              width: '150%',
               height: '100%',
               top: '0%',
-              left: '6%',
+              left: '0%',
               borderRadius: '0 0 0 0',
               maskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
               WebkitMaskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
@@ -640,7 +1025,7 @@ function ListDestinationCard({ result, rank }: { result: SearchResult; rank: num
               {result.currency} {result.flight_price.toFixed(2)}
             </div>
             <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-              Score: {result.score.toFixed(1)}
+              {t('score')}: {result.score.toFixed(1)}
             </div>
           </div>
           
@@ -649,8 +1034,12 @@ function ListDestinationCard({ result, rank }: { result: SearchResult; rank: num
               <div>✈️ {new Date(result.best_departure).toLocaleDateString()}</div>
               <div>🔄 {new Date(result.best_return).toLocaleDateString()}</div>
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-              {result.total_stops === 0 ? 'Direct' : `${result.total_stops} stop(s)`} • {result.airlines}
+            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-right">
+              <div className="flex items-center justify-end gap-1.5">
+                <span>{result.total_stops === 0 ? t('direct') : `${result.total_stops} ${result.total_stops === 1 ? t('stop') : t('stops')}`}</span>
+                <span>•</span>
+                <AirlineDisplay airlines={result.airlines} />
+              </div>
             </div>
           </div>
         </div>
