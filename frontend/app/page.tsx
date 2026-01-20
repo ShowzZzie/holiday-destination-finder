@@ -870,7 +870,7 @@ function DestinationCard({ result, rank }: { result: SearchResult; rank: number 
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-gray-600 dark:text-gray-400">✈️ {t('stops')}</span>
+            <span className="text-gray-600 dark:text-gray-400">✈️ {t('stopsLabel')}</span>
             <span className="font-medium text-gray-900 dark:text-white">
               {result.total_stops === 0 ? t('direct') : `${result.total_stops} ${result.total_stops === 1 ? t('stop') : t('stops')}`}
             </span>
