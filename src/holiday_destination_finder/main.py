@@ -5,6 +5,8 @@ from holiday_destination_finder.providers.ryanair_test import find_cheapest_offe
 from holiday_destination_finder.providers.wizzair_test import find_cheapest_trip
 from pathlib import Path
 import csv, argparse, datetime, threading, time, os, requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Optional
 
 
 
@@ -102,6 +104,148 @@ def main(origin, start, end, trip_length, providers, top_n: int = 10):
 
 
 
+def _process_single_destination(
+    row: dict,
+    idx: int,
+    total: int,
+    origin: str,
+    start: str,
+    end: str,
+    trip_length: int,
+    providers: list[str],
+    weather_cache: dict,
+    weather_cache_lock: threading.Lock,
+    verbose: bool,
+    progress_cb
+) -> Optional[dict]:
+    """Process a single destination and return result dict or None."""
+    city = row['city']
+    country = row['country']
+    lat_f = float(row["lat"])
+    lon_f = float(row["lon"])
+    airport = row['airport']
+    
+    if verbose:
+        print(f"[processing] CURRENT DESTINATION: {city} ({airport})", flush=True)
+        print(f"[processing] {idx} / {total} destinations processed", flush=True)
+
+    if progress_cb:
+        try:
+            progress_cb(idx, total, city, airport)
+        except Exception:
+            pass
+
+    # Process flight providers in parallel
+    offers_a: list[tuple] = []
+    offers_r: list[tuple] = []
+    offers_w: list[tuple] = []
+
+    def fetch_amadeus():
+        try:
+            return get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
+        except Exception as e:
+            if verbose:
+                print(f"[amadeus] failed for {city} ({airport}): {e}", flush=True)
+            return []
+    
+    def fetch_ryanair():
+        try:
+            return find_cheapest_offer(
+                get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length)
+            )
+        except Exception as e:
+            if verbose:
+                print(f"[ryanair] failed for {city} ({airport}): {e}", flush=True)
+            return []
+    
+    def fetch_wizzair():
+        try:
+            return find_cheapest_trip(origin, airport, start, end, trip_length)
+        except Exception as e:
+            if verbose:
+                print(f"[wizzair] failed for {city} ({airport}): {e}", flush=True)
+            return []
+
+    # Run providers in parallel
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {}
+        if "amadeus" in providers:
+            futures["amadeus"] = executor.submit(fetch_amadeus)
+        if "ryanair" in providers:
+            futures["ryanair"] = executor.submit(fetch_ryanair)
+        if "wizzair" in providers:
+            futures["wizzair"] = executor.submit(fetch_wizzair)
+        
+        for provider, future in futures.items():
+            try:
+                result = future.result()
+                if provider == "amadeus":
+                    offers_a = result or []
+                elif provider == "ryanair":
+                    offers_r = result or []
+                elif provider == "wizzair":
+                    offers_w = result or []
+            except Exception as e:
+                if verbose:
+                    print(f"[{provider}] exception for {city} ({airport}): {e}", flush=True)
+
+    candidates = [trip for trip in (offers_a + offers_r + offers_w) if trip is not None]
+    if not candidates:
+        return None
+
+    price_list = [float(tup[0]) for tup in candidates]
+    loc_min_price = min(price_list)
+    loc_max_price = max(price_list)
+
+    best_tup = None
+    best_score = None
+    best_weather = None
+
+    for price, curr, stops, airline, dep, ret in candidates:
+        dep_s = _to_iso(dep)
+        ret_s = _to_iso(ret)
+        cache_key = (lat_f, lon_f, dep_s, ret_s)
+        
+        # Thread-safe weather cache access
+        with weather_cache_lock:
+            if cache_key not in weather_cache:
+                try:
+                    weather_data = get_weather_data(lat_f, lon_f, dep_s, ret_s)
+                    weather_cache[cache_key] = weather_data
+                except Exception as e:
+                    if verbose:
+                        print("[BUG] Failed to retrieve weather data for:", cache_key, e, flush=True)
+                    continue
+            weather_info = weather_cache[cache_key]
+
+        score = total_score(weather_info, price, stops, loc_min_price, loc_max_price)
+        
+        if best_score is None or score > best_score:
+            best_score = score
+            best_tup = (price, curr, stops, airline, dep, ret)
+            best_weather = weather_info
+
+    if best_tup and best_weather is not None:
+        flight_price, currency, total_stops, airlines, best_dep, best_ret = best_tup
+
+        return {
+            "city": city,
+            "country": country,
+            "airport": airport,
+            "avg_temp_c": best_weather["avg_temp_c"],
+            "avg_precip_mm_per_day": best_weather["avg_precip_mm_per_day"],
+            "flight_price": float(flight_price),
+            "currency": currency,
+            "total_stops": total_stops,
+            "airlines": airlines,
+            "best_departure": _to_iso(best_dep),
+            "best_return": _to_iso(best_ret),
+            "weather_data": best_weather,
+        }
+    
+    return None
+
+
 def search_destinations(
     origin: str | None,
     start: str | None,
@@ -110,145 +254,60 @@ def search_destinations(
     providers: list[str] | None,
     top_n: int = 10,
     verbose: bool = True,
-    progress_cb = None
+    progress_cb = None,
+    max_workers: Optional[int] = None
 ) -> list[dict]:
     
     providers = _normalize_providers(providers)
 
-    """if origin is None:
-        origin = input("Enter origin airport IATA code: ")
-    if start is None:
-        start = input("Enter start date (YYYY-MM-DD): ")
-    if end is None:
-        end = input("Enter end date (YYYY-MM-DD): ")
-    if trip_length is None:
-        trip_length = int(input("Enter trip length in days: "))
-        # start_dt_tl = datetime.datetime.strptime(start, "%Y-%m-%d")
-        # end_dt_tl = datetime.datetime.strptime(end, "%Y-%m-%d")
-        
-        #trip_length = (end_dt_tl - start_dt_tl).days
-        if trip_length <= 0:
-            raise ValueError("end must be after start for inferred trip_length")"""
-
-
-    results: list[dict] = []
-    weather_cache: dict[tuple[float, float, str, str], dict] = {}
-
     if os.getenv("RENDER") == "true":
         CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities_web.csv"
         print(f"[main] Using web cities file: cities_web.csv")
+        # Use fewer workers on web to avoid rate limits
+        max_workers = max_workers or 3
     else:
         CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities_local.csv"
         print(f"[main] Using local cities file: cities_local.csv")
+        # Use more workers locally for faster processing
+        max_workers = max_workers or 10
 
-    with open(CITIES_CSV, newline="", encoding="utf-8") as fh:
-        total = sum(1 for _ in fh) - 1  # subtract header
-
+    # Read all destinations first
+    destinations = []
     with open(CITIES_CSV, newline="", encoding="utf-8") as cities_csv:
         reader = csv.DictReader(cities_csv)
+        destinations = list(reader)
+    
+    total = len(destinations)
+    print(f"[main] Processing {total} destinations with {max_workers} parallel workers", flush=True)
 
-        for idx, row in enumerate(reader, start=1):
-            city = row['city']
-            country = row['country']
-            lat_f = float(row["lat"])
-            lon_f = float(row["lon"])
-            airport = row['airport']
-            
-            if verbose:
-                print(f"[processing] CURRENT DESTINATION: {city} ({airport})", flush=True)
-                print(f"[processing] {idx} / {total} destinations processed", flush=True)
+    results: list[dict] = []
+    weather_cache: dict[tuple[float, float, str, str], dict] = {}
+    weather_cache_lock = threading.Lock()
+    processed_count = 0
+    processed_lock = threading.Lock()
 
-            if progress_cb:
-                try:
-                    progress_cb(idx, total, city, airport)
-                except Exception:
-                    pass
+    # Process destinations in parallel
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {}
+        for idx, row in enumerate(destinations, start=1):
+            future = executor.submit(
+                _process_single_destination,
+                row, idx, total, origin, start, end, trip_length, providers,
+                weather_cache, weather_cache_lock, verbose, progress_cb
+            )
+            futures[future] = idx
 
-            offers_a: list[tuple] = []
-            offers_r: list[tuple] = []
-            offers_w: list[tuple] = []
-
-            # Amadeus
-            if "amadeus" in providers:
-                try:
-                    offers_a = get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
-                except Exception as e:
-                    if verbose:
-                        print(f"[amadeus] failed for {city} ({airport}): {e}", flush=True)
-
-            # Ryanair
-            if "ryanair" in providers:
-                try:
-                    offers_r = find_cheapest_offer(
-                        get_cheapest_ryanair_offer_for_dates(origin, airport, start, end, trip_length)
-                    )
-                except Exception as e:
-                    if verbose:
-                        print(f"[ryanair] failed for {city} ({airport}): {e}", flush=True)
-
-            # Wizzair
-            if "wizzair" in providers:
-                try:
-                    offers_w = find_cheapest_trip(origin, airport, start, end, trip_length)
-                except Exception as e:
-                    if verbose:
-                        print(f"[wizzair] failed for {city} ({airport}): {e}", flush=True)
-
-            offers_a = offers_a or []
-            offers_r = offers_r or []
-            offers_w = offers_w or []
-
-            candidates = [trip for trip in (offers_a + offers_r + offers_w) if trip is not None]
-            if not candidates:
-                continue
-
-            price_list = [float(tup[0]) for tup in candidates]
-            loc_min_price = min(price_list)
-            loc_max_price = max(price_list)
-
-            best_tup = None
-            best_score = None
-            best_weather = None
-
-            for price, curr, stops, airline, dep, ret in candidates:
-                dep_s = _to_iso(dep)
-                ret_s = _to_iso(ret)
-                cache_key = (lat_f, lon_f, dep_s, ret_s)
-                
-                if cache_key not in weather_cache:
-                    try:
-                        weather_cache[cache_key] = get_weather_data(lat_f, lon_f, dep_s, ret_s)
-                    except Exception as e:
-                        if verbose:
-                            print("[BUG] Failed to retrieve weather data for:", cache_key, e, flush=True)
-                        continue
-                weather_info = weather_cache[cache_key]
-
-                score = total_score(weather_info, price, stops, loc_min_price, loc_max_price)
-                
-                if best_score is None or score > best_score:
-                    best_score = score
-                    best_tup = (price, curr, stops, airline, dep, ret)
-                    best_weather = weather_info
-
-            if best_tup and best_weather is not None:
-                flight_price, currency, total_stops, airlines, best_dep, best_ret = best_tup
-
-                result = {
-                    "city": city,
-                    "country": country,
-                    "airport": airport,
-                    "avg_temp_c": best_weather["avg_temp_c"],
-                    "avg_precip_mm_per_day": best_weather["avg_precip_mm_per_day"],
-                    "flight_price": float(flight_price),   # ensure numeric
-                    "currency": currency,
-                    "total_stops": total_stops,
-                    "airlines": airlines,
-                    "best_departure": _to_iso(best_dep),
-                    "best_return": _to_iso(best_ret),
-                    "weather_data": best_weather,              # keep full weather dict for scoring
-                }
-                results.append(result)
+        for future in as_completed(futures):
+            idx = futures[future]
+            try:
+                result = future.result()
+                if result:
+                    with processed_lock:
+                        results.append(result)
+                        processed_count += 1
+            except Exception as e:
+                if verbose:
+                    print(f"[ERROR] Failed to process destination {idx}: {e}", flush=True)
 
     prices = [r["flight_price"] for r in results if r.get("flight_price") is not None]
     if not prices:

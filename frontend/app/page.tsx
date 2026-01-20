@@ -63,6 +63,9 @@ export default function Home() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [recentlyCreatedJobIds, setRecentlyCreatedJobIds] = useState<Set<string>>(new Set());
+  // Local state for number inputs to allow empty values during typing
+  const [tripLengthInput, setTripLengthInput] = useState<string>('7');
+  const [topNInput, setTopNInput] = useState<string>('5');
 
   // Check API health on mount
   useEffect(() => {
@@ -415,8 +418,30 @@ export default function Home() {
                 <input
                   type="number"
                   id="trip_length"
-                  value={formData.trip_length}
-                  onChange={(e) => setFormData({ ...formData, trip_length: parseInt(e.target.value) || 7 })}
+                  value={tripLengthInput}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setTripLengthInput(val);
+                    // Update formData if valid number
+                    const num = parseInt(val);
+                    if (val !== '' && !isNaN(num) && num > 0) {
+                      setFormData({ ...formData, trip_length: num });
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    const num = parseInt(val);
+                    // If empty or invalid on blur, set to default
+                    if (val === '' || isNaN(num) || num <= 0) {
+                      const defaultValue = 7;
+                      setTripLengthInput(defaultValue.toString());
+                      setFormData({ ...formData, trip_length: defaultValue });
+                    } else {
+                      // Ensure formData is synced
+                      setFormData({ ...formData, trip_length: num });
+                    }
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white"
                   min="1"
                   required
@@ -431,8 +456,30 @@ export default function Home() {
                 <input
                   type="number"
                   id="top_n"
-                  value={formData.top_n}
-                  onChange={(e) => setFormData({ ...formData, top_n: parseInt(e.target.value) || 10 })}
+                  value={topNInput}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setTopNInput(val);
+                    // Update formData if valid number
+                    const num = parseInt(val);
+                    if (val !== '' && !isNaN(num) && num > 0) {
+                      setFormData({ ...formData, top_n: num });
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    const num = parseInt(val);
+                    // If empty or invalid on blur, set to default
+                    if (val === '' || isNaN(num) || num <= 0) {
+                      const defaultValue = 5;
+                      setTopNInput(defaultValue.toString());
+                      setFormData({ ...formData, top_n: defaultValue });
+                    } else {
+                      // Ensure formData is synced
+                      setFormData({ ...formData, top_n: num });
+                    }
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white"
                   min="1"
                   max="50"

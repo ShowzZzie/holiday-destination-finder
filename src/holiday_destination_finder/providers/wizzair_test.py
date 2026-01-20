@@ -117,8 +117,9 @@ def _get_source_currency() -> str:
 
 def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: str, trip_length: int):
     """
-    Find cheapest trips using SearchDates API for faster performance.
-    Handles date ranges > 61 days by splitting into multiple calls.
+    Find cheapest trips.
+    - When running locally: Uses SearchFlights for each date (simpler, more reliable)
+    - When running on web (RENDER=true): Uses SearchDates API for faster performance, then verifies with SearchFlights
     Returns list of (price, currency, stops, airline, dep, ret) tuples.
     """
     origin = origin.upper()
@@ -141,10 +142,112 @@ def find_cheapest_trip(origin: str, destination: str, from_date: str, to_date: s
         return []
 
     source_currency = _get_source_currency()
+    
+    # Use simpler SearchFlights approach when running locally
+    if os.getenv("RENDER") != "true":
+        return _find_cheapest_trip_simple(origin, destination, from_date, to_date, trip_length, source_currency)
+    
+    # Use SearchDates hybrid approach when on web
+    return _find_cheapest_trip_with_searchdates(origin, destination, from_date, to_date, trip_length, source_currency)
 
+
+def _find_cheapest_trip_simple(origin: str, destination: str, from_date: str, to_date: str, trip_length: int, source_currency: str):
+    """
+    Simple approach: Use SearchFlights for each date combination (used when running locally).
+    """
+    from_date_dt = datetime.strptime(from_date, "%Y-%m-%d")
+    to_date_dt = datetime.strptime(to_date, "%Y-%m-%d")
+    trips = []
+    
+    print(f"[wizzair] Using SearchFlights approach (local mode) for {origin} → {destination}", flush=True)
+    
+    while from_date_dt <= to_date_dt - timedelta(days=trip_length):
+        _CALLS["date_checks"] += 1
+        dep = from_date_dt.date().isoformat()
+        ret = (from_date_dt + timedelta(days=trip_length)).date().isoformat()
+
+        print(f"[wizzair] checked dep={dep} ret={ret}", flush=True)
+        
+        try:
+            flight_segments = [
+                FlightSegment(
+                    departure_airport = [[Airport[origin], 0]],
+                    arrival_airport = [[Airport[destination], 0]],
+                    travel_date = dep
+                ),
+                FlightSegment(
+                    departure_airport = [[Airport[destination], 0]],
+                    arrival_airport = [[Airport[origin], 0]],
+                    travel_date = ret
+                )
+            ]
+        except KeyError:
+            _ERRORS["other_err_det"] += 1
+            from_date_dt += timedelta(days=1)
+            continue
+
+        filters = FlightSearchFilters(
+            passenger_info = PassengerInfo(adults=1),
+            flight_segments = flight_segments,
+            seat_type = SeatType.ECONOMY,
+            stops = MaxStops.NON_STOP,
+            sort_by = SortBy.CHEAPEST,
+            airlines = [Airline["W6"]],
+            trip_type = TripType.ROUND_TRIP
+        )
+
+        flight_results = _search_with_retries(filters)
+        if not flight_results:
+            from_date_dt += timedelta(days=1)
+            continue
+
+        try:
+            outbound, return_flight = flight_results[0]
+            p_out = float(outbound.price)
+            p_ret = float(return_flight.price)
+            EPS = 0.01
+
+            if abs(p_out - p_ret) <= EPS:
+                trip_price = p_out
+            else:
+                trip_price = min(p_out, p_ret)
+
+            if source_currency == "EUR":
+                price_eur = float(trip_price)
+            else:
+                price_eur = float(c.convert(trip_price, source_currency, "EUR"))
+            
+            dep_actual = outbound.legs[0].departure_datetime.date().isoformat()
+            ret_actual = return_flight.legs[0].departure_datetime.date().isoformat()
+            
+            trips.append((
+                round(price_eur, 2),
+                "EUR",
+                0,
+                "Wizz Air",
+                dep_actual,
+                ret_actual
+            ))
+        except (IndexError, ValueError, TypeError, AttributeError) as e:
+            _ERRORS["other_err_det"] += 1
+
+        from_date_dt += timedelta(days=1)
+    
+    trips.sort(key=lambda x: x[0])
+    print(f"[wizzair] Final results: {len(trips)} trips found", flush=True)
+    return trips
+
+
+def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_date: str, to_date: str, trip_length: int, source_currency: str):
+    """
+    Hybrid approach: Use SearchDates to find date combinations, then verify with SearchFlights (used on web).
+    Handles date ranges > 61 days by splitting into multiple calls.
+    """
+    from_date_dt = datetime.strptime(from_date, "%Y-%m-%d")
+    to_date_dt = datetime.strptime(to_date, "%Y-%m-%d")
+    
     # IMPORTANT: to_date is the latest RETURN date, not departure date
     # So the latest departure date is: to_date - trip_length
-    # This matches the old code: while from_date_dt <= to_date_dt - timedelta(days=trip_length)
     latest_departure_dt = to_date_dt - timedelta(days=trip_length)
     
     if latest_departure_dt < from_date_dt:
