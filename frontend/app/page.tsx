@@ -62,6 +62,7 @@ export default function Home() {
   const [validJobIds, setValidJobIds] = useState<Set<string>>(new Set());
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [recentlyCreatedJobIds, setRecentlyCreatedJobIds] = useState<Set<string>>(new Set());
 
   // Check API health on mount
   useEffect(() => {
@@ -100,42 +101,69 @@ export default function Home() {
     setValidJobIds(validIds);
   };
 
-  // Save job ID with metadata to history when a new job is created
+  // Save job ID with metadata to history when a new job is created (not when selecting existing job)
   useEffect(() => {
-    if (jobStatus?.job_id && jobStatus?.payload?.meta) {
-      const meta = jobStatus.payload.meta;
-      setJobHistory(prev => {
-        const newEntry = {
-          jobId: jobStatus.job_id,
-          origin: meta.origin || 'N/A',
-          start: meta.start || 'N/A',
-          end: meta.end || 'N/A',
-        };
-        const updated = [
-          newEntry,
-          ...prev.filter(item => item.jobId !== jobStatus.job_id)
-        ].slice(0, 20); // Keep last 20
-        localStorage.setItem('jobHistory', JSON.stringify(updated));
-        return updated;
-      });
-    } else if (jobStatus?.job_id && formData.origin && formData.start && formData.end) {
-      // Fallback: use current form data if meta is not available yet
-      setJobHistory(prev => {
-        const newEntry = {
-          jobId: jobStatus.job_id,
-          origin: formData.origin,
-          start: formData.start,
-          end: formData.end,
-        };
-        const updated = [
-          newEntry,
-          ...prev.filter(item => item.jobId !== jobStatus.job_id)
-        ].slice(0, 20); // Keep last 20
-        localStorage.setItem('jobHistory', JSON.stringify(updated));
+    // Only add to history if this is a newly created job (not just selected)
+    if (jobStatus?.job_id && recentlyCreatedJobIds.has(jobStatus.job_id)) {
+      if (jobStatus?.payload?.meta) {
+        const meta = jobStatus.payload.meta;
+        setJobHistory(prev => {
+          // Check if job already exists in history
+          const exists = prev.some(item => item.jobId === jobStatus.job_id);
+          if (exists) {
+            // Job already in history, don't reorder - just update metadata if needed
+            return prev.map(item => 
+              item.jobId === jobStatus.job_id 
+                ? { ...item, origin: meta.origin || item.origin, start: meta.start || item.start, end: meta.end || item.end }
+                : item
+            );
+          }
+          // New job - add to front
+          const newEntry = {
+            jobId: jobStatus.job_id,
+            origin: meta.origin || 'N/A',
+            start: meta.start || 'N/A',
+            end: meta.end || 'N/A',
+          };
+          const updated = [
+            newEntry,
+            ...prev.filter(item => item.jobId !== jobStatus.job_id)
+          ].slice(0, 20);
+          localStorage.setItem('jobHistory', JSON.stringify(updated));
+          return updated;
+        });
+      } else if (formData.origin && formData.start && formData.end) {
+        // Fallback: use current form data if meta is not available yet
+        setJobHistory(prev => {
+          // Check if job already exists in history
+          const exists = prev.some(item => item.jobId === jobStatus.job_id);
+          if (exists) {
+            // Job already in history, don't reorder
+            return prev;
+          }
+          // New job - add to front
+          const newEntry = {
+            jobId: jobStatus.job_id,
+            origin: formData.origin,
+            start: formData.start,
+            end: formData.end,
+          };
+          const updated = [
+            newEntry,
+            ...prev.filter(item => item.jobId !== jobStatus.job_id)
+          ].slice(0, 20);
+          localStorage.setItem('jobHistory', JSON.stringify(updated));
+          return updated;
+        });
+      }
+      // Remove from recently created set after processing
+      setRecentlyCreatedJobIds(prev => {
+        const updated = new Set(prev);
+        updated.delete(jobStatus.job_id);
         return updated;
       });
     }
-  }, [jobStatus?.job_id, jobStatus?.payload?.meta, formData.origin, formData.start, formData.end]);
+  }, [jobStatus?.job_id, jobStatus?.payload?.meta, formData.origin, formData.start, formData.end, recentlyCreatedJobIds]);
 
   // Poll job status when job is active
   useEffect(() => {
@@ -180,6 +208,9 @@ export default function Home() {
       const response = await startSearch(formData);
       console.log('🔍 Search Job Created - Job ID:', response.job_id);
       console.log('📍 Direct API URL:', `${process.env.NEXT_PUBLIC_API_URL || 'https://holiday-destination-finder.onrender.com'}/jobs/${response.job_id}`);
+      
+      // Mark this as a newly created job
+      setRecentlyCreatedJobIds(prev => new Set([...prev, response.job_id]));
       
       // Save to history immediately with form data
       setJobHistory(prev => {
@@ -780,7 +811,7 @@ function DestinationCard({ result, rank }: { result: SearchResult; rank: number 
           <div
             className="absolute"
             style={{
-              background: `url(${flagUrl})`,
+              backgroundImage: `url(${flagUrl})`,
               backgroundSize: 'cover',
               backgroundPosition: isItaly ? '30% center' : 'center center',
               backgroundRepeat: 'no-repeat',
@@ -881,7 +912,7 @@ function WideDestinationCard({ result, rank }: { result: SearchResult; rank: num
           <div
             className="absolute"
             style={{
-              background: `url(${flagUrl})`,
+              backgroundImage: `url(${flagUrl})`,
               backgroundSize: 'contain',
               backgroundPosition: 'left center',
               backgroundRepeat: 'no-repeat',
@@ -987,7 +1018,7 @@ function ListDestinationCard({ result, rank }: { result: SearchResult; rank: num
           <div
             className="absolute"
             style={{
-              background: `url(${flagUrl})`,
+              backgroundImage: `url(${flagUrl})`,
               backgroundSize: 'contain',
               backgroundPosition: 'left center',
               backgroundRepeat: 'no-repeat',
