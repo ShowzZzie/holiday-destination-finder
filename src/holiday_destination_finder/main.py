@@ -4,9 +4,11 @@ from holiday_destination_finder.scoring import total_score
 from holiday_destination_finder.providers.ryanair_test import find_cheapest_offer, get_cheapest_ryanair_offer_for_dates
 from holiday_destination_finder.providers.wizzair_test import find_cheapest_trip
 from pathlib import Path
-import csv, argparse, datetime, threading, time, os, requests
+import csv, argparse, datetime, threading, time, os, requests, logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -45,22 +47,22 @@ def main(origin, start, end, trip_length, providers, top_n: int = 10):
             if r.status_code == 200 and r.ok:
                 cc = r.text.strip().upper()
                 if len(cc) == 3:
-                    print(f"[main] Detected local currency via IPAPI: {cc}")
+                    logger.info(f"[main] Detected local currency via IPAPI: {cc}")
                     os.environ["USER_LOCAL_CURRENCY"] = cc
                 else:
-                    print(f"[main] IPAPI returned malformed currency '{r.text}', falling back")
+                    logger.warning(f"[main] IPAPI returned malformed currency '{r.text}', falling back")
             else:
                 body = r.text.strip()[:100] if r.text else "NO_BODY"
-                print(f"[main] IPAPI returned HTTP {r.status_code} — body: '{body}'")
+                logger.warning(f"[main] IPAPI returned HTTP {r.status_code} — body: '{body}'")
 
         except Exception as e:
-            print(f"[main] Exception during IPAPI lookup: {e}")
+            logger.warning(f"[main] Exception during IPAPI lookup: {e}")
 
         # If still no currency -> fallback
         if not os.getenv("USER_LOCAL_CURRENCY"):
             fallback = "PLN"
             os.environ["USER_LOCAL_CURRENCY"] = fallback
-            print(f"[main] Fallback USER_LOCAL_CURRENCY set to '{fallback}'")
+            logger.info(f"[main] Fallback USER_LOCAL_CURRENCY set to '{fallback}'")
 
     
     providers = _normalize_providers(providers)
@@ -77,15 +79,15 @@ def main(origin, start, end, trip_length, providers, top_n: int = 10):
 
     if not results:
         stop_event.set()
-        print("No destinations with flight prices found.")
+        logger.info("No destinations with flight prices found.")
         if "amadeus" in providers:
-            print("Amadeus calls:", amadeus_call_stats())
-            print("Amadeus 429 Errors:", amadeus_429_err_count())
+            logger.info(f"Amadeus calls: {amadeus_call_stats()}")
+            logger.info(f"Amadeus 429 Errors: {amadeus_429_err_count()}")
         return
 
-    print("Pos | City (Airport) — Score | Flight Price | Stops | Avg Temp | Avg Rainfall")
+    logger.info("Pos | City (Airport) — Score | Flight Price | Stops | Avg Temp | Avg Rainfall")
     for i, row in enumerate(results[:top_n], start=1):
-        print(
+        logger.info(
             f"{i}. {row['city']} ({row['airport']}) — "
             f"Score: {row['score']:.2f} | "
             f"{row['currency']} {row['flight_price']} | "
@@ -98,8 +100,8 @@ def main(origin, start, end, trip_length, providers, top_n: int = 10):
     stop_event.set()
 
     if "amadeus" in providers:
-        print("Amadeus calls:", amadeus_call_stats())
-        print("Amadeus 429 Errors:", amadeus_429_err_count())
+        logger.info(f"Amadeus calls: {amadeus_call_stats()}")
+        logger.info(f"Amadeus 429 Errors: {amadeus_429_err_count()}")
 
 
 
@@ -126,8 +128,8 @@ def _process_single_destination(
     airport = row['airport']
     
     if verbose:
-        print(f"[processing] CURRENT DESTINATION: {city} ({airport})", flush=True)
-        print(f"[processing] {idx} / {total} destinations processed", flush=True)
+        logger.info(f"[processing] CURRENT DESTINATION: {city} ({airport})")
+        logger.info(f"[processing] {idx} / {total} destinations processed")
 
     if progress_cb:
         try:
@@ -145,7 +147,7 @@ def _process_single_destination(
             return get_best_offer_in_window(origin, airport, start, end, trip_length, sleep_s=0.2)
         except Exception as e:
             if verbose:
-                print(f"[amadeus] failed for {city} ({airport}): {e}", flush=True)
+                logger.warning(f"[amadeus] failed for {city} ({airport}): {e}")
             return []
     
     def fetch_ryanair():
@@ -155,7 +157,7 @@ def _process_single_destination(
             )
         except Exception as e:
             if verbose:
-                print(f"[ryanair] failed for {city} ({airport}): {e}", flush=True)
+                logger.warning(f"[ryanair] failed for {city} ({airport}): {e}")
             return []
     
     def fetch_wizzair():
@@ -163,7 +165,7 @@ def _process_single_destination(
             return find_cheapest_trip(origin, airport, start, end, trip_length)
         except Exception as e:
             if verbose:
-                print(f"[wizzair] failed for {city} ({airport}): {e}", flush=True)
+                logger.warning(f"[wizzair] failed for {city} ({airport}): {e}")
             return []
 
     # Run providers in parallel
@@ -187,7 +189,7 @@ def _process_single_destination(
                     offers_w = result or []
             except Exception as e:
                 if verbose:
-                    print(f"[{provider}] exception for {city} ({airport}): {e}", flush=True)
+                    logger.warning(f"[{provider}] exception for {city} ({airport}): {e}")
 
     candidates = [trip for trip in (offers_a + offers_r + offers_w) if trip is not None]
     if not candidates:
@@ -214,7 +216,7 @@ def _process_single_destination(
                     weather_cache[cache_key] = weather_data
                 except Exception as e:
                     if verbose:
-                        print("[BUG] Failed to retrieve weather data for:", cache_key, e, flush=True)
+                        logger.error(f"[BUG] Failed to retrieve weather data for: {cache_key} {e}")
                     continue
             weather_info = weather_cache[cache_key]
 
@@ -262,12 +264,12 @@ def search_destinations(
 
     if os.getenv("RENDER") == "true":
         CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities_web.csv"
-        print(f"[main] Using web cities file: cities_web.csv")
+        logger.info("[main] Using web cities file: cities_web.csv")
         # Use fewer workers on web to avoid rate limits
         max_workers = max_workers or 3
     else:
         CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities_local.csv"
-        print(f"[main] Using local cities file: cities_local.csv")
+        logger.info("[main] Using local cities file: cities_local.csv")
         # Use more workers locally for faster processing
         max_workers = max_workers or 10
 
@@ -278,7 +280,7 @@ def search_destinations(
         destinations = list(reader)
     
     total = len(destinations)
-    print(f"[main] Processing {total} destinations with {max_workers} parallel workers", flush=True)
+    logger.info(f"[main] Processing {total} destinations with {max_workers} parallel workers")
 
     results: list[dict] = []
     weather_cache: dict[tuple[float, float, str, str], dict] = {}
@@ -307,7 +309,7 @@ def search_destinations(
                         processed_count += 1
             except Exception as e:
                 if verbose:
-                    print(f"[ERROR] Failed to process destination {idx}: {e}", flush=True)
+                    logger.error(f"[ERROR] Failed to process destination {idx}: {e}")
 
     prices = [r["flight_price"] for r in results if r.get("flight_price") is not None]
     if not prices:
@@ -353,10 +355,12 @@ def start_elapsed_timer(stop_event: threading.Event):
     start_time = time.time()
     while not stop_event.is_set():
         elapsed = int(time.time() - start_time)
-        print(f"[running] {elapsed // 60}m{elapsed % 60}s elapsed", flush=True)
+        logger.debug(f"[running] {elapsed // 60}m{elapsed % 60}s elapsed")
         time.sleep(1)
 
 if __name__ == "__main__":
+    from holiday_destination_finder.config import setup_logging
+    setup_logging()
     args = parse_args()
     providers = [p.strip().lower() for p in (args.providers or "").split(",") if p.strip()]
     main(args.origin, args.start, args.end, args.trip_length, providers, args.top_n)

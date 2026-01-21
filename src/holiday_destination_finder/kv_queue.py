@@ -1,5 +1,7 @@
-import os, json, time, uuid
+import os, json, time, uuid, logging
 import redis
+
+logger = logging.getLogger(__name__)
 
 r = redis.Redis.from_url(os.environ["REDIS_URL"], decode_responses=True)
 
@@ -65,7 +67,7 @@ def get_queue_position(job_id: str) -> int | None:
             return None
     except Exception as e:
         # Log error for debugging but don't break the API
-        print(f"[kv_queue] Error getting queue position: {e}")
+        logger.error(f"[kv_queue] Error getting queue position: {e}")
         return None
 
 def cancel_job(job_id: str) -> bool:
@@ -88,5 +90,5 @@ def cancel_job(job_id: str) -> bool:
         
         return False
     except Exception as e:
-        print(f"[kv_queue] Error cancelling job {job_id}: {e}")
+        logger.error(f"[kv_queue] Error cancelling job {job_id}: {e}")
         return False

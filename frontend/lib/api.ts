@@ -1,6 +1,16 @@
 // API client for Holiday Destination Finder backend
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://holiday-destination-finder.onrender.com';
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';
+
+// Common headers for authenticated requests
+function getAuthHeaders(): HeadersInit {
+  const headers: HeadersInit = {};
+  if (API_KEY) {
+    headers['X-API-Key'] = API_KEY;
+  }
+  return headers;
+}
 
 export interface SearchParams {
   origin: string;
@@ -52,14 +62,16 @@ export async function startSearch(params: SearchParams): Promise<JobResponse> {
     trip_length: params.trip_length.toString(),
     top_n: params.top_n.toString(),
   });
-  
+
   // Add providers as multiple query params
   params.providers.forEach(provider => {
     searchParams.append('providers', provider);
   });
 
-  const response = await fetch(`${API_BASE_URL}/search?${searchParams.toString()}`);
-  
+  const response = await fetch(`${API_BASE_URL}/search?${searchParams.toString()}`, {
+    headers: getAuthHeaders(),
+  });
+
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Failed to start search: ${error}`);
@@ -69,8 +81,10 @@ export async function startSearch(params: SearchParams): Promise<JobResponse> {
 }
 
 export async function getJobStatus(jobId: string): Promise<JobStatus> {
-  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`);
-  
+  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, {
+    headers: getAuthHeaders(),
+  });
+
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error('Job not found');
@@ -94,8 +108,9 @@ export async function checkHealth(): Promise<boolean> {
 export async function cancelJob(jobId: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/cancel`, {
     method: 'POST',
+    headers: getAuthHeaders(),
   });
-  
+
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Failed to cancel job: ${error}`);

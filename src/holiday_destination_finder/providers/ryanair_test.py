@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
 from ryanair import Ryanair
 from ryanair.types import Flight
+import logging
+
+logger = logging.getLogger(__name__)
 
 _currency = "EUR"
 api = Ryanair(currency=_currency)
@@ -21,7 +24,7 @@ def get_cheapest_ryanair_offer_for_dates(origin: str, destination: str, from_dat
             return_date_to = from_date_dt + timedelta(days=trip_length),#to_date_dt,
             destination_airport = destination
         )
-        print(f"[ryanair] checked {from_date_dt.date().isoformat()} -> found={bool(temp_flights)}")
+        logger.debug(f"[ryanair] checked {from_date_dt.date().isoformat()} -> found={bool(temp_flights)}")
         # only keep meaningful results
         if temp_flights:
             flights.append(temp_flights)
@@ -63,6 +66,8 @@ def find_cheapest_offer(trip_list):
 # print(find_cheapest_offer(func_call))
 
 if __name__ == "__main__":
+    from holiday_destination_finder.config import setup_logging
+    setup_logging("DEBUG")
     origin = "WRO"              # MUST BE AN ARGUEMENT
     destination = "AGP"         # MUST BE AN ARGUEMENT
     from_date = "2026-05-01"    # MUST BE AN ARGUEMENT
@@ -71,5 +76,5 @@ if __name__ == "__main__":
     r_from_date = "2026-02-01"
     r_to_date = "2026-12-31"
     func_call = get_cheapest_ryanair_offer_for_dates(origin, destination, from_date, to_date, trip_length)
-    print(find_cheapest_offer(func_call))
+    logger.info(f"Results: {find_cheapest_offer(func_call)}")
 

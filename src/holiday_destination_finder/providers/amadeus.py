@@ -1,7 +1,11 @@
-import os, requests, json, time
+import os, requests, json, time, logging
 from datetime import date, timedelta
+from currency_converter import CurrencyConverter
+
+logger = logging.getLogger(__name__)
 
 _SESSION = requests.Session()
+_CURRENCY_CONVERTER = CurrencyConverter()
 
 _TOKEN_CACHE = {
     "access_token": None,
@@ -187,6 +191,16 @@ def get_cheapest_offer_for_dates(origin, destination, from_date, to_date, trip_l
     cheapest_price = float(best["price"]["total"])
     cheapest_currency = best["price"]["currency"]
 
+    # Normalize to EUR if different currency returned
+    if cheapest_currency != "EUR":
+        try:
+            cheapest_price = round(_CURRENCY_CONVERTER.convert(cheapest_price, cheapest_currency, "EUR"), 2)
+            logger.info(f"[amadeus] Converted {cheapest_currency} to EUR: {cheapest_price}")
+            cheapest_currency = "EUR"
+        except Exception as e:
+            logger.warning(f"[amadeus] Currency conversion failed for {cheapest_currency}: {e}")
+            # Keep original currency if conversion fails
+
     return cheapest_price, cheapest_currency, total_stops, airlines
 
 
@@ -206,7 +220,7 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
     offers = []
 
     d = start_dt
-    print(f"[amadeus] probing {origin}->{destination} from {from_date} to {to_date} (trip_length={trip_length})")
+    logger.info(f"[amadeus] probing {origin}->{destination} from {from_date} to {to_date} (trip_length={trip_length})")
     while d <= last_start:
         dep = d.isoformat()
         ret = (d + timedelta(days=trip_length)).isoformat()
@@ -217,7 +231,7 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
         if price is not None:
             offers.append((price, currency, stops, airlines, dep, ret))
 
-        print(f"[amadeus] checked dep={dep} ret={ret} -> price={'None' if price is None else price}")
+        logger.debug(f"[amadeus] checked dep={dep} ret={ret} -> price={'None' if price is None else price}")
 
 
         if sleep_s:
@@ -225,11 +239,13 @@ def get_best_offer_in_window(origin: str, destination: str, from_date: str, to_d
 
         d += timedelta(days=1)
 
-    print(f"[amadeus] finished window search | offers_found: {len(offers)}")
+    logger.info(f"[amadeus] finished window search | offers_found: {len(offers)}")
     return offers
 
 
 
 if __name__ == "__main__":
-    print(get_amadeus_token())
-    print(get_best_offer_in_window("WRO", "CTA", "2026-01-16", "2026-01-27", 7))
+    from holiday_destination_finder.config import setup_logging
+    setup_logging("DEBUG")
+    logger.info(f"Token: {get_amadeus_token()}")
+    logger.info(f"Results: {get_best_offer_in_window('WRO', 'CTA', '2026-01-16', '2026-01-27', 7)}")

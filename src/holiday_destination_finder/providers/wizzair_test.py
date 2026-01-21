@@ -13,7 +13,9 @@ from fli.models import (
 )
 from fli.search import SearchFlights, SearchDates
 from currency_converter import CurrencyConverter
-import time, os
+import time, os, logging
+
+logger = logging.getLogger(__name__)
 
 c = CurrencyConverter()
 
@@ -96,20 +98,20 @@ def _get_source_currency() -> str:
     env_ccy = os.getenv("FLI_SOURCE_CCY")
     if env_ccy:
         src = env_ccy.strip().upper()
-        print(f"[wizzair] Using source currency from FLI_SOURCE_CCY: {src}", flush=True)
+        logger.info(f"[wizzair] Using source currency from FLI_SOURCE_CCY: {src}")
         return src
 
     user_ccy = os.getenv("USER_LOCAL_CURRENCY")
     if user_ccy:
         src = user_ccy.strip().upper()
-        print(f"[wizzair] Using source currency from USER_LOCAL_CURRENCY: {src}", flush=True)
+        logger.info(f"[wizzair] Using source currency from USER_LOCAL_CURRENCY: {src}")
         return src
 
     if os.getenv("RENDER") == "true":
-        print("[wizzair] Detected Render env -> treating fli prices as EUR.", flush=True)
+        logger.info("[wizzair] Detected Render env -> treating fli prices as EUR.")
         return "EUR"
 
-    print("[wizzair] No explicit currency set, defaulting fli source currency to EUR.", flush=True)
+    logger.info("[wizzair] No explicit currency set, defaulting fli source currency to EUR.")
     return "EUR"
 
 
@@ -159,14 +161,14 @@ def _find_cheapest_trip_simple(origin: str, destination: str, from_date: str, to
     to_date_dt = datetime.strptime(to_date, "%Y-%m-%d")
     trips = []
     
-    print(f"[wizzair] Using SearchFlights approach (local mode) for {origin} → {destination}", flush=True)
+    logger.info(f"[wizzair] Using SearchFlights approach (local mode) for {origin} → {destination}")
     
     while from_date_dt <= to_date_dt - timedelta(days=trip_length):
         _CALLS["date_checks"] += 1
         dep = from_date_dt.date().isoformat()
         ret = (from_date_dt + timedelta(days=trip_length)).date().isoformat()
 
-        print(f"[wizzair] checked dep={dep} ret={ret}", flush=True)
+        logger.debug(f"[wizzair] checked dep={dep} ret={ret}")
         
         try:
             flight_segments = [
@@ -234,7 +236,7 @@ def _find_cheapest_trip_simple(origin: str, destination: str, from_date: str, to
         from_date_dt += timedelta(days=1)
     
     trips.sort(key=lambda x: x[0])
-    print(f"[wizzair] Final results: {len(trips)} trips found", flush=True)
+    logger.info(f"[wizzair] Final results: {len(trips)} trips found")
     return trips
 
 
@@ -260,7 +262,7 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
     total_days = (effective_to - effective_from).days + 1
     MAX_DAYS_PER_SEARCH = 61
     
-    print(f"[wizzair] Searching {origin} → {destination} (depart: {from_date} to {effective_to.strftime('%Y-%m-%d')}, return by: {to_date}, trip_length={trip_length} days)", flush=True)
+    logger.info(f"[wizzair] Searching {origin} → {destination} (depart: {from_date} to {effective_to.strftime('%Y-%m-%d')}, return by: {to_date}, trip_length={trip_length} days)")
     
     # Collect all date-price combinations
     all_valid_dates = []
@@ -269,7 +271,7 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
     if total_days <= MAX_DAYS_PER_SEARCH:
         window_start = from_date
         window_end = effective_to.strftime("%Y-%m-%d")
-        print(f"[wizzair] Single window search: {window_start} to {window_end}", flush=True)
+        logger.info(f"[wizzair] Single window search: {window_start} to {window_end}")
         
         filters = DateSearchFilters(
             trip_type = TripType.ROUND_TRIP,
@@ -296,7 +298,7 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
         
         results = _search_dates_with_retries(filters)
         if results:
-            print(f"[wizzair] Found {len(results)} date combinations", flush=True)
+            logger.info(f"[wizzair] Found {len(results)} date combinations")
             for result in results:
                 dep_datetime, ret_datetime = result.date
                 dep_date = dep_datetime.date().isoformat()
@@ -314,7 +316,7 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
                         'price_raw': result.price,
                     })
         else:
-            print(f"[wizzair] No results found for {window_start} to {window_end}", flush=True)
+            logger.info(f"[wizzair] No results found for {window_start} to {window_end}")
     else:
         # Split into multiple 61-day windows (with 1-day overlap to ensure no dates missed)
         # Window 1: days 0-60 (61 days)
@@ -331,7 +333,7 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
             window_end_str = window_end_dt.strftime("%Y-%m-%d")
             
             window_num += 1
-            print(f"[wizzair] Searching date window {window_num}: {window_start_str} to {window_end_str}", flush=True)
+            logger.info(f"[wizzair] Searching date window {window_num}: {window_start_str} to {window_end_str}")
             
             filters = DateSearchFilters(
                 trip_type = TripType.ROUND_TRIP,
@@ -358,7 +360,7 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
             
             results = _search_dates_with_retries(filters)
             if results:
-                print(f"[wizzair] Window {window_num}: Found {len(results)} date combinations", flush=True)
+                logger.info(f"[wizzair] Window {window_num}: Found {len(results)} date combinations")
                 for result in results:
                     dep_datetime, ret_datetime = result.date
                     dep_date = dep_datetime.date().isoformat()
@@ -376,7 +378,7 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
                             'price_raw': result.price,
                         })
             else:
-                print(f"[wizzair] Window {window_num}: No results found", flush=True)
+                logger.info(f"[wizzair] Window {window_num}: No results found")
             
             # Move to next window: advance by 60 days (creates 1-day overlap)
             # This ensures no dates are missed, and duplicates are handled by deduplication
@@ -391,13 +393,13 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
     
     all_valid_dates = list(seen.values())
     
-    print(f"[wizzair] Total unique date combinations from SearchDates: {len(all_valid_dates)}", flush=True)
+    logger.info(f"[wizzair] Total unique date combinations from SearchDates: {len(all_valid_dates)}")
     
     if not all_valid_dates:
         return []
     
     # HYBRID APPROACH: Use SearchFlights to get accurate prices for each date combination
-    print(f"[wizzair] Verifying prices with SearchFlights for {len(all_valid_dates)} date combinations...", flush=True)
+    logger.info(f"[wizzair] Verifying prices with SearchFlights for {len(all_valid_dates)} date combinations...")
     
     trips = []
     for idx, item in enumerate(all_valid_dates, 1):
@@ -405,7 +407,7 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
         ret_date = item['ret_date']
         
         _CALLS["date_checks"] += 1
-        print(f"[wizzair] checking {idx}/{len(all_valid_dates)}: {dep_date} -> {ret_date}", flush=True)
+        logger.debug(f"[wizzair] checking {idx}/{len(all_valid_dates)}: {dep_date} -> {ret_date}")
 
         try:
             # Use SearchFlights to get accurate price for this specific date combination
@@ -434,7 +436,7 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
             
             flight_results = _search_with_retries(filters)
             if not flight_results:
-                print(f"[wizzair] no SearchFlights results for {dep_date} -> {ret_date}", flush=True)
+                logger.debug(f"[wizzair] no SearchFlights results for {dep_date} -> {ret_date}")
                 continue
 
 
@@ -448,10 +450,9 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
                     if abs(p_out - p_ret) <= EPS:
                         trip_price = p_out
                     else:
-                        print(
+                        logger.warning(
                             f"[wizzair] WARNING: prices differ out={p_out} ret={p_ret} for {dep_date}->{ret_date} "
-                            f"(taking min to avoid double count)",
-                            flush=True
+                            f"(taking min to avoid double count)"
                         )
                         trip_price = min(p_out, p_ret)
 
@@ -464,9 +465,8 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
                     dep_actual = outbound.legs[0].departure_datetime.date().isoformat()
                     ret_actual = return_flight.legs[0].departure_datetime.date().isoformat()
                     
-                    print(
-                        f"[wizzair] FINAL price for {dep_actual}->{ret_actual}: {trip_price} {source_currency} => {price_eur:.2f} EUR",
-                        flush=True
+                    logger.debug(
+                        f"[wizzair] FINAL price for {dep_actual}->{ret_actual}: {trip_price} {source_currency} => {price_eur:.2f} EUR"
                     )
                     
                     trips.append((
@@ -487,7 +487,7 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
     # Sort by price (EUR) - cheapest first
     trips.sort(key=lambda x: x[0])
     
-    print(f"[wizzair] Final results: {len(trips)} trips with verified prices", flush=True)
+    logger.info(f"[wizzair] Final results: {len(trips)} trips with verified prices")
     
     return trips
 
@@ -495,11 +495,13 @@ def _find_cheapest_trip_with_searchdates(origin: str, destination: str, from_dat
 
 
 if __name__ == "__main__":
+    from holiday_destination_finder.config import setup_logging
+    setup_logging("DEBUG")
     origin = "WRO"
     destination = "MAD"
     from_date = "2026-05-01"
     to_date = "2026-08-31"
     trip_length = 7
-    print(find_cheapest_trip(origin, destination, from_date, to_date, trip_length))
-    print(_CALLS)
-    print(_ERRORS)
+    logger.info(f"Results: {find_cheapest_trip(origin, destination, from_date, to_date, trip_length)}")
+    logger.info(f"Calls: {_CALLS}")
+    logger.info(f"Errors: {_ERRORS}")

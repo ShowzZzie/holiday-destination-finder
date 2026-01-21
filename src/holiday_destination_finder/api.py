@@ -2,13 +2,108 @@ from datetime import date
 from typing import List, Optional
 import json
 import threading
+import os
+import re
+import logging
+import time
+import redis
 
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Depends, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from .kv_queue import enqueue, get_job, get_queue_position, cancel_job
 from .worker import main as worker_main  # your existing worker loop
+from .config import setup_logging
+
+# Initialize logging on module load
+setup_logging()
+logger = logging.getLogger(__name__)
+
+# Redis connection for rate limiting
+_redis = redis.Redis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379"), decode_responses=True)
+
+# API Key configuration
+_API_KEY = os.environ.get("API_KEY")
+
+# Rate limiting configuration
+RATE_LIMIT_REQUESTS = 30  # requests per window
+RATE_LIMIT_WINDOW_SECONDS = 3600  # 1 hour
+
+
+def _get_client_ip(request: Request) -> str:
+    """Extract client IP, considering proxy headers."""
+    # Check for forwarded header (common with reverse proxies like Render)
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        # Take the first IP in the chain (original client)
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-Key")) -> None:
+    """
+    Dependency to verify API key.
+    If API_KEY env var is not set, authentication is disabled (development mode).
+    """
+    if not _API_KEY:
+        # No API key configured - allow all requests (dev mode)
+        logger.debug("[api] No API_KEY configured, skipping authentication")
+        return
+
+    if not x_api_key:
+        logger.warning("[api] Request missing API key")
+        raise HTTPException(
+            status_code=401,
+            detail="Missing API key. Include 'X-API-Key' header."
+        )
+
+    if x_api_key != _API_KEY:
+        logger.warning("[api] Invalid API key provided")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API key."
+        )
+
+
+def check_rate_limit(request: Request) -> None:
+    """
+    Dependency to enforce rate limiting per IP address.
+    Uses Redis to track request counts with a sliding window.
+    """
+    client_ip = _get_client_ip(request)
+    rate_key = f"rate_limit:{client_ip}"
+
+    try:
+        current_count = _redis.get(rate_key)
+
+        if current_count is None:
+            # First request in this window
+            _redis.setex(rate_key, RATE_LIMIT_WINDOW_SECONDS, 1)
+        else:
+            count = int(current_count)
+            if count >= RATE_LIMIT_REQUESTS:
+                ttl = _redis.ttl(rate_key)
+                logger.warning(f"[api] Rate limit exceeded for IP {client_ip}")
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Rate limit exceeded. Maximum {RATE_LIMIT_REQUESTS} requests per hour. Try again in {ttl} seconds."
+                )
+            # Increment counter
+            _redis.incr(rate_key)
+    except redis.RedisError as e:
+        # If Redis fails, log but allow the request (fail open)
+        logger.error(f"[api] Redis error during rate limiting: {e}")
+
+
+# Combined dependency for protected endpoints
+async def protected_endpoint(
+    request: Request,
+    _key: None = Depends(verify_api_key),
+    _rate: None = Depends(check_rate_limit)
+) -> None:
+    """Combined dependency that checks both API key and rate limit."""
+    pass
 
 class SearchResult(BaseModel):
     city: str
@@ -26,10 +121,19 @@ class SearchResult(BaseModel):
 
 app = FastAPI(title="Holiday Destination Finder API")
 
-# Enable CORS for frontend access
+# CORS configuration - restrict to known frontend origins
+_default_origins = [
+    "https://holiday-destination-finder.vercel.app",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+# Allow override via environment variable (comma-separated list)
+_env_origins = os.getenv("CORS_ORIGINS")
+_allowed_origins = _env_origins.split(",") if _env_origins else _default_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific frontend URLs
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,8 +149,66 @@ def start_embedded_worker():
 def health():
     return {"status": "ok"}
 
+# Input validation helpers
+_IATA_PATTERN = re.compile(r"^[A-Z]{3}$")
+_VALID_PROVIDERS = {"amadeus", "ryanair", "wizzair"}
+
+def _validate_origin(origin: str) -> str:
+    """Validate and normalize airport IATA code."""
+    origin = origin.strip().upper()
+    if not _IATA_PATTERN.match(origin):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid origin '{origin}': must be a 3-letter IATA airport code (e.g., WRO, LHR, JFK)"
+        )
+    return origin
+
+def _validate_dates(start: date, end: date, trip_length: int) -> None:
+    """Validate date range and trip length compatibility."""
+    if end < start:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid date range: end date ({end}) must be after start date ({start})"
+        )
+
+    date_range_days = (end - start).days
+    if date_range_days < trip_length:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid date range: date range ({date_range_days} days) must be >= trip length ({trip_length} days)"
+        )
+
+def _validate_trip_length(trip_length: int) -> int:
+    """Validate trip length bounds."""
+    if trip_length < 1:
+        raise HTTPException(status_code=422, detail="trip_length must be at least 1 day")
+    if trip_length > 65:
+        raise HTTPException(status_code=422, detail="trip_length cannot exceed 30 days")
+    return trip_length
+
+def _validate_providers(providers: List[str]) -> List[str]:
+    """Validate and normalize provider list."""
+    normalized = [p.strip().lower() for p in providers if p.strip()]
+    invalid = [p for p in normalized if p not in _VALID_PROVIDERS]
+    if invalid:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid providers: {invalid}. Valid options: {sorted(_VALID_PROVIDERS)}"
+        )
+    if not normalized:
+        raise HTTPException(status_code=422, detail="At least one provider must be specified")
+    return normalized
+
+def _validate_top_n(top_n: int) -> int:
+    """Validate top_n bounds."""
+    if top_n < 1:
+        raise HTTPException(status_code=422, detail="top_n must be at least 1")
+    if top_n > 50:
+        raise HTTPException(status_code=422, detail="top_n cannot exceed 50")
+    return top_n
+
 # Start a job (return immediately)
-@app.get("/search", status_code=202)
+@app.get("/search", status_code=202, dependencies=[Depends(protected_endpoint)])
 def search(
     origin: str = Query("WRO"),
     start: date = Query(...),
@@ -55,18 +217,27 @@ def search(
     providers: List[str] = Query(["ryanair", "wizzair"]),
     top_n: int = Query(10),
 ):
+    # Validate all inputs
+    origin = _validate_origin(origin)
+    trip_length = _validate_trip_length(trip_length)
+    _validate_dates(start, end, trip_length)
+    providers = _validate_providers(providers)
+    top_n = _validate_top_n(top_n)
+
     params = {
         "origin": origin,
         "start": start.isoformat(),
         "end": end.isoformat(),
         "trip_length": trip_length,
-        "providers": [p.strip().lower() for p in providers if p.strip()],
+        "providers": providers,
         "top_n": top_n,
     }
+
+    logger.info(f"[api] Creating search job: origin={origin}, {start} to {end}, trip_length={trip_length}, providers={providers}")
     job_id = enqueue(params)
     return {"job_id": job_id}
 
-@app.get("/jobs/{job_id}")
+@app.get("/jobs/{job_id}", dependencies=[Depends(protected_endpoint)])
 def job(job_id: str):
     data = get_job(job_id)
     if not data:
@@ -102,7 +273,7 @@ def job(job_id: str):
     
     return out
 
-@app.post("/jobs/{job_id}/cancel")
+@app.post("/jobs/{job_id}/cancel", dependencies=[Depends(protected_endpoint)])
 def cancel(job_id: str):
     success = cancel_job(job_id)
     if not success:
