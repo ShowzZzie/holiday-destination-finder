@@ -944,32 +944,33 @@ function WideDestinationCard({ result, rank }: { result: SearchResult; rank: num
   const { t } = useLanguage();
   const countryCode = getCountryCode(result.country);
   const flagUrl = getFlagUrl(countryCode, 'w2560');
+  const isItaly = result.country === 'Italy';
 
   return (
-    <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
-      {/* Flag background - waved trapezoid, attached on left */}
-      <div className="absolute -left-16 top-0 bottom-0 w-64 opacity-30 dark:opacity-18 pointer-events-none" style={{ overflow: 'visible' }}>
+    <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg p-5 md:p-6 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
+      {/* Flag background - waved trapezoid, attached on left - matching DestinationCard */}
+      <div className="absolute -left-8 md:-left-16 top-0 bottom-0 w-44 md:w-64 opacity-30 dark:opacity-18 pointer-events-none" style={{ overflow: 'visible' }}>
         <div 
           className="w-full h-full relative"
           style={{
-            maskImage: 'linear-gradient(to right, black 0%, black 80%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to right, black 0%, black 80%, transparent 100%)',
+            maskImage: 'linear-gradient(to right, black 0%, black 85%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, black 0%, black 85%, transparent 100%)',
           }}
         >
           <div
             className="absolute"
             style={{
               backgroundImage: `url(${flagUrl})`,
-              backgroundSize: 'contain',
-              backgroundPosition: 'left center',
+              backgroundSize: 'cover',
+              backgroundPosition: isItaly ? '30% center' : 'center center',
               backgroundRepeat: 'no-repeat',
-              clipPath: 'polygon(0 0, 80% 0, 95% 100%, 0 100%)',
-              WebkitClipPath: 'polygon(0 0, 80% 0, 95% 100%, 0 100%)',
+              clipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)',
+              WebkitClipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)',
               filter: 'blur(0px)',
-              width: '180%',
+              width: isItaly ? '140%' : '120%',
               height: '100%',
               top: '0%',
-              left: '0%',
+              left: isItaly ? '0%' : '14%',
               maskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
               WebkitMaskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
             }}
@@ -977,7 +978,70 @@ function WideDestinationCard({ result, rank }: { result: SearchResult; rank: num
         </div>
       </div>
 
-      <div className="relative z-10">
+      {/* Mobile: Matching DestinationCard layout */}
+      <div className="relative z-10 md:hidden">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                #{rank}
+              </span>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {result.city}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {result.country} ({result.airport})
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-bold text-green-600 dark:text-green-400">
+              {result.currency} {result.flight_price.toFixed(2)}
+            </div>
+            <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+              {t('score')}: {result.score.toFixed(1)}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-400">🌡️ {t('temperature')}</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {result.avg_temp_c.toFixed(1)}°C
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-400">🌧️ {t('rainfall')}</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {result.avg_precip_mm_per_day.toFixed(2)} mm/day
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-400">✈️ {t('stopsLabel')}</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {result.total_stops === 0 ? t('direct') : `${result.total_stops} ${result.total_stops === 1 ? t('stop') : t('stops')}`}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-400">🛫 {t('airline')}</span>
+            <div className="font-medium text-gray-900 dark:text-white text-right max-w-[60%] truncate">
+              <AirlineDisplay airlines={result.airlines} />
+            </div>
+          </div>
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <div className="text-sm font-medium text-gray-900 dark:text-white">
+              <div>✈️ {t('departure')}: {new Date(result.best_departure).toLocaleDateString()}</div>
+              <div>🔄 {t('return')}: {new Date(result.best_return).toLocaleDateString()}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop: Original wide layout */}
+      <div className="relative z-10 hidden md:block">
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
@@ -1004,7 +1068,7 @@ function WideDestinationCard({ result, rank }: { result: SearchResult; rank: num
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div className="grid grid-cols-4 gap-4 text-sm">
           <div>
             <span className="text-gray-600 dark:text-gray-400 block mb-1">🌡️ {t('temperature')}</span>
             <span className="font-semibold text-gray-900 dark:text-white text-base">
@@ -1050,31 +1114,33 @@ function ListDestinationCard({ result, rank }: { result: SearchResult; rank: num
   const { t } = useLanguage();
   const countryCode = getCountryCode(result.country);
   const flagUrl = getFlagUrl(countryCode, 'w2560');
+  const isItaly = result.country === 'Italy';
 
   return (
-    <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
-      {/* Flag background - circular icon for position 5+, fills height */}
-      <div className="absolute -left-6 top-0 bottom-0 w-32 opacity-30 dark:opacity-18 pointer-events-none" style={{ overflow: 'visible' }}>
+    <div className="relative border border-gray-200 dark:border-gray-700 rounded-lg p-5 hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
+      {/* Flag background - waved trapezoid, attached on left - matching DestinationCard */}
+      <div className="absolute -left-8 top-0 bottom-0 w-44 opacity-30 dark:opacity-18 pointer-events-none" style={{ overflow: 'visible' }}>
         <div 
           className="w-full h-full relative"
           style={{
-            maskImage: 'linear-gradient(to right, black 0%, black 88%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to right, black 0%, black 88%, transparent 100%)',
+            maskImage: 'linear-gradient(to right, black 0%, black 85%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, black 0%, black 85%, transparent 100%)',
           }}
         >
           <div
             className="absolute"
             style={{
               backgroundImage: `url(${flagUrl})`,
-              backgroundSize: 'contain',
-              backgroundPosition: 'left center',
+              backgroundSize: 'cover',
+              backgroundPosition: isItaly ? '30% center' : 'center center',
               backgroundRepeat: 'no-repeat',
+              clipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)',
+              WebkitClipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)',
               filter: 'blur(0px)',
-              width: '150%',
+              width: isItaly ? '140%' : '120%',
               height: '100%',
               top: '0%',
-              left: '0%',
-              borderRadius: '0 0 0 0',
+              left: isItaly ? '0%' : '14%',
               maskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
               WebkitMaskImage: 'linear-gradient(to right, black 0%, transparent 100%)',
             }}
@@ -1082,7 +1148,70 @@ function ListDestinationCard({ result, rank }: { result: SearchResult; rank: num
         </div>
       </div>
 
-      <div className="relative z-10 flex items-center justify-between">
+      {/* Mobile: Matching DestinationCard layout */}
+      <div className="relative z-10 md:hidden">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                #{rank}
+              </span>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {result.city}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {result.country} ({result.airport})
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-bold text-green-600 dark:text-green-400">
+              {result.currency} {result.flight_price.toFixed(2)}
+            </div>
+            <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+              {t('score')}: {result.score.toFixed(1)}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-400">🌡️ {t('temperature')}</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {result.avg_temp_c.toFixed(1)}°C
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-400">🌧️ {t('rainfall')}</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {result.avg_precip_mm_per_day.toFixed(2)} mm/day
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-400">✈️ {t('stopsLabel')}</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {result.total_stops === 0 ? t('direct') : `${result.total_stops} ${result.total_stops === 1 ? t('stop') : t('stops')}`}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-400">🛫 {t('airline')}</span>
+            <div className="font-medium text-gray-900 dark:text-white text-right max-w-[60%] truncate">
+              <AirlineDisplay airlines={result.airlines} />
+            </div>
+          </div>
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <div className="text-sm font-medium text-gray-900 dark:text-white">
+              <div>✈️ {t('departure')}: {new Date(result.best_departure).toLocaleDateString()}</div>
+              <div>🔄 {t('return')}: {new Date(result.best_return).toLocaleDateString()}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop: Original horizontal layout */}
+      <div className="relative z-10 hidden md:flex items-center justify-between">
         <div className="flex items-center gap-4 flex-1">
           <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400 min-w-[3rem]">
             #{rank}
