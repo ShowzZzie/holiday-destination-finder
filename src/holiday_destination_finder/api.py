@@ -96,13 +96,21 @@ def check_rate_limit(request: Request) -> None:
         logger.error(f"[api] Redis error during rate limiting: {e}")
 
 
-# Combined dependency for protected endpoints
-async def protected_endpoint(
+# Dependency for rate-limited endpoints (only /search)
+async def search_endpoint(
     request: Request,
     _key: None = Depends(verify_api_key),
     _rate: None = Depends(check_rate_limit)
 ) -> None:
-    """Combined dependency that checks both API key and rate limit."""
+    """Dependency that checks API key AND rate limit. Use for /search only."""
+    pass
+
+
+# Dependency for non-rate-limited endpoints (job status, cancel)
+async def authenticated_endpoint(
+    _key: None = Depends(verify_api_key)
+) -> None:
+    """Dependency that checks API key only (no rate limit). Use for polling endpoints."""
     pass
 
 class SearchResult(BaseModel):
@@ -207,8 +215,8 @@ def _validate_top_n(top_n: int) -> int:
         raise HTTPException(status_code=422, detail="top_n cannot exceed 50")
     return top_n
 
-# Start a job (return immediately)
-@app.get("/search", status_code=202, dependencies=[Depends(protected_endpoint)])
+# Start a job (return immediately) - rate limited
+@app.get("/search", status_code=202, dependencies=[Depends(search_endpoint)])
 def search(
     origin: str = Query("WRO"),
     start: date = Query(...),
@@ -237,7 +245,7 @@ def search(
     job_id = enqueue(params)
     return {"job_id": job_id}
 
-@app.get("/jobs/{job_id}", dependencies=[Depends(protected_endpoint)])
+@app.get("/jobs/{job_id}", dependencies=[Depends(authenticated_endpoint)])
 def job(job_id: str):
     data = get_job(job_id)
     if not data:
@@ -273,7 +281,7 @@ def job(job_id: str):
     
     return out
 
-@app.post("/jobs/{job_id}/cancel", dependencies=[Depends(protected_endpoint)])
+@app.post("/jobs/{job_id}/cancel", dependencies=[Depends(authenticated_endpoint)])
 def cancel(job_id: str):
     success = cancel_job(job_id)
     if not success:
