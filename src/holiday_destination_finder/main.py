@@ -3,7 +3,7 @@ from holiday_destination_finder.providers.amadeus import get_best_offer_in_windo
 from holiday_destination_finder.scoring import total_score
 from holiday_destination_finder.providers.ryanair_test import find_cheapest_offer, get_cheapest_ryanair_offer_for_dates
 from holiday_destination_finder.providers.wizzair_test import find_cheapest_trip
-from holiday_destination_finder.providers.serpapi_claude import discover_destinations, serpapi_call_stats
+from holiday_destination_finder.providers.serpapi_test import discover_destinations, serpapi_call_stats
 from pathlib import Path
 import csv, argparse, datetime, threading, time, os, requests, logging, re
 from concurrent.futures import ThreadPoolExecutor, as_completed
