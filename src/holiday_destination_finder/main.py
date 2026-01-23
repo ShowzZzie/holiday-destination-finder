@@ -3,6 +3,7 @@ from holiday_destination_finder.providers.amadeus import get_best_offer_in_windo
 from holiday_destination_finder.scoring import total_score
 from holiday_destination_finder.providers.ryanair_test import find_cheapest_offer, get_cheapest_ryanair_offer_for_dates
 from holiday_destination_finder.providers.wizzair_test import find_cheapest_trip
+from holiday_destination_finder.providers.serpapi_claude import discover_destinations, serpapi_call_stats
 from pathlib import Path
 import csv, argparse, datetime, threading, time, os, requests, logging, re
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 _IATA_PATTERN = re.compile(r"^[A-Z]{3}$")
-_VALID_PROVIDERS = {"amadeus", "ryanair", "wizzair"}
+_VALID_PROVIDERS = {"amadeus", "ryanair", "wizzair", "serpapi"}
 
 
 class ValidationError(Exception):
@@ -231,6 +232,8 @@ def main(origin, start, end, trip_length, providers, top_n: int = 10):
 
     stop_event.set()
 
+    if "serpapi" in providers:
+        logger.info(f"SerpAPI stats: {serpapi_call_stats()}")
     if "amadeus" in providers:
         logger.info(f"Amadeus calls: {amadeus_call_stats()}")
         logger.info(f"Amadeus 429 Errors: {amadeus_429_err_count()}")
@@ -380,6 +383,137 @@ def _process_single_destination(
     return None
 
 
+def _search_with_serpapi(
+    origin: str,
+    start: str,
+    end: str,
+    trip_length: int,
+    top_n: int = 10,
+    verbose: bool = True,
+    progress_cb = None,
+) -> list[dict]:
+    """
+    Search using SerpAPI - discovers destinations AND flights in one call.
+    No CSV needed.
+    """
+    logger.info(f"[serpapi] Discovering destinations from {origin}")
+
+    # Get all destinations with flight data from SerpAPI
+    serpapi_results = discover_destinations(origin, start, end, trip_length)
+
+    if not serpapi_results:
+        logger.info("[serpapi] No destinations found")
+        return []
+
+    total = len(serpapi_results)
+    logger.info(f"[serpapi] Found {total} flights, fetching weather data...")
+
+    results: list[dict] = []
+    weather_cache: dict[tuple[float, float, str, str], dict] = {}
+
+    # Group flights by airport to find best per destination
+    by_airport: dict[str, list[dict]] = {}
+    for flight in serpapi_results:
+        airport = flight["airport"]
+        if airport not in by_airport:
+            by_airport[airport] = []
+        by_airport[airport].append(flight)
+
+    # Process each destination
+    for idx, (airport, flights) in enumerate(by_airport.items(), start=1):
+        city = flights[0]["city"]
+        country = flights[0]["country"]
+        lat = flights[0]["lat"]
+        lon = flights[0]["lon"]
+
+        if verbose:
+            logger.debug(f"[serpapi] Processing {city} ({airport}) - {len(flights)} flights")
+
+        if progress_cb:
+            try:
+                progress_cb(idx, len(by_airport), city, airport)
+            except Exception:
+                pass
+
+        # Get price range for this destination
+        prices = [f["price"] for f in flights]
+        loc_min_price = min(prices)
+        loc_max_price = max(prices)
+
+        best_score = None
+        best_flight = None
+        best_weather = None
+
+        for flight in flights:
+            dep_date = flight["dep_date"]
+            ret_date = flight["ret_date"]
+            cache_key = (lat, lon, dep_date, ret_date)
+
+            # Get weather data (with caching)
+            if cache_key not in weather_cache:
+                try:
+                    weather_data = get_weather_data(lat, lon, dep_date, ret_date)
+                    weather_cache[cache_key] = weather_data
+                except Exception as e:
+                    if verbose:
+                        logger.warning(f"[serpapi] Weather fetch failed for {city}: {e}")
+                    continue
+
+            weather_info = weather_cache[cache_key]
+
+            # Score this flight
+            score = total_score(
+                weather_info,
+                flight["price"],
+                flight["stops"],
+                loc_min_price,
+                loc_max_price,
+            )
+
+            if best_score is None or score > best_score:
+                best_score = score
+                best_flight = flight
+                best_weather = weather_info
+
+        if best_flight and best_weather:
+            results.append({
+                "city": city,
+                "country": country,
+                "airport": airport,
+                "avg_temp_c": best_weather["avg_temp_c"],
+                "avg_precip_mm_per_day": best_weather["avg_precip_mm_per_day"],
+                "flight_price": best_flight["price"],
+                "currency": best_flight["currency"],
+                "total_stops": best_flight["stops"],
+                "airlines": best_flight["airline"],
+                "best_departure": best_flight["dep_date"],
+                "best_return": best_flight["ret_date"],
+                "weather_data": best_weather,
+            })
+
+    if not results:
+        return []
+
+    # Final scoring with global price range
+    prices = [r["flight_price"] for r in results]
+    min_price = min(prices)
+    max_price = max(prices)
+
+    for r in results:
+        r["score"] = total_score(
+            r["weather_data"],
+            r["flight_price"],
+            r["total_stops"],
+            min_price,
+            max_price,
+        )
+        r.pop("weather_data", None)
+
+    results.sort(key=lambda x: float(x.get('score', 0)), reverse=True)
+    logger.info(f"[serpapi] Returning {len(results)} scored destinations")
+    return results[:top_n]
+
+
 def search_destinations(
     origin: str | None,
     start: str | None,
@@ -391,9 +525,14 @@ def search_destinations(
     progress_cb = None,
     max_workers: Optional[int] = None
 ) -> list[dict]:
-    
+
     providers = _normalize_providers(providers)
 
+    # If serpapi is the only provider, use the optimized SerpAPI flow
+    if providers == ["serpapi"]:
+        return _search_with_serpapi(origin, start, end, trip_length, top_n, verbose, progress_cb)
+
+    # Original CSV + providers flow
     if os.getenv("RENDER") == "true":
         CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities_web.csv"
         logger.info("[main] Using web cities file: cities_web.csv")
@@ -410,7 +549,7 @@ def search_destinations(
     with open(CITIES_CSV, newline="", encoding="utf-8") as cities_csv:
         reader = csv.DictReader(cities_csv)
         destinations = list(reader)
-    
+
     total = len(destinations)
     logger.info(f"[main] Processing {total} destinations with {max_workers} parallel workers")
 
@@ -512,7 +651,7 @@ def parse_args():
     p.add_argument("--end", "-e", type=argparse_date, help="End date (YYYY-MM-DD)")
     p.add_argument("--trip_length", "-tl", type=argparse_trip_length, help="Length of the trip in days (1-30)")
     p.add_argument("--top_n", "-t", type=argparse_top_n, default=10, help="Number of top destinations to display (1-50)")
-    p.add_argument("--providers", "-p", type=str, default="ryanair,wizzair", help="Comma-separated list of providers: amadeus,ryanair,wizzair")
+    p.add_argument("--providers", "-p", type=str, default="serpapi", help="Comma-separated list of providers: serpapi,amadeus,ryanair,wizzair")
     return p.parse_args()
 
 def start_elapsed_timer(stop_event: threading.Event):

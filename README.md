@@ -123,6 +123,9 @@ export REDIS_URL="redis://localhost:6379/0"  # Or your Redis URL
 export AMADEUS_API_KEY_V2TEST="your_key"
 export AMADEUS_API_SECRET_V2TEST="your_secret"
 
+# Optional: SerpAPI (for SerpAPI provider)
+export SERPAPI_API_KEY="your_key"
+
 # Optional: Currency detection
 export USER_LOCAL_CURRENCY="EUR"  # Auto-detected via IPAPI if not set
 export FLI_SOURCE_CCY="EUR"      # Currency for Wizz Air prices

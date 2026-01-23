@@ -2,6 +2,15 @@ Metadata-Version: 2.4
 Name: holiday-destination-finder
 Version: 0.0.1
 Requires-Python: >=3.11
+Requires-Dist: fastapi[standard]
+Requires-Dist: uvicorn
 Requires-Dist: requests
+Requires-Dist: ryanair-py
+Requires-Dist: flights
+Requires-Dist: CurrencyConverter
+Requires-Dist: Authlib
+Requires-Dist: redis>=5.0.0
+Requires-Dist: python-dotenv
 Requires-Dist: pandas
 Requires-Dist: python-dateutil
+Requires-Dist: google-search-results

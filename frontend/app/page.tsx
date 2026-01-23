@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { startSearch, getJobStatus, checkHealth, cancelJob, SearchParams, JobStatus, SearchResult } from '@/lib/api';
 import { getCountryCode, getFlagUrl, getRegion, ALL_REGIONS, Region } from '@/lib/country-flags';
@@ -1298,16 +1298,31 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
   const countryCode = getCountryCode(result.country);
   const flagUrl = getFlagUrl(countryCode, 'w2560');
   const isTopResult = rank === 1;
+  const scoreButtonRef = useRef<HTMLDivElement>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
 
   // Helper to determine if a field is highlighted
   const isHighlighted = (field: SortField) => highlightField === field;
 
+  const handleScoreHover = (isHovering: boolean) => {
+    if (isHovering && scoreButtonRef.current) {
+      const rect = scoreButtonRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        top: rect.top - 10, // Position above the button
+        left: rect.left + rect.width / 2, // Center horizontally
+      });
+    }
+    setShowTooltip(isHovering);
+  };
+
   return (
-    <div className={`relative border rounded-xl transition-all hover:shadow-lg overflow-hidden ${
-      isTopResult
-        ? 'border-indigo-300 dark:border-indigo-600 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-gray-800'
-        : 'border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900'
-    }`}>
+    <div className="relative">
+      <div className={`relative border rounded-xl transition-all hover:shadow-lg overflow-hidden ${
+        isTopResult
+          ? 'border-indigo-300 dark:border-indigo-600 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-gray-800'
+          : 'border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900'
+      }`}>
       {/* Flag background */}
       <div className="absolute -left-4 sm:-left-8 top-0 bottom-0 w-24 sm:w-40 opacity-25 dark:opacity-15 pointer-events-none">
         <div
@@ -1420,11 +1435,16 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
             {/* Stats */}
             <div className="flex items-center gap-3 flex-shrink-0">
               {/* Score with tooltip */}
-              <div className={`relative group px-3 py-2 rounded-lg text-center min-w-[70px] ${
-                isHighlighted('score')
-                  ? 'bg-indigo-100 dark:bg-indigo-900/40 ring-2 ring-indigo-500'
-                  : 'bg-gray-100 dark:bg-gray-700/50'
-              }`}>
+              <div 
+                ref={scoreButtonRef}
+                onMouseEnter={() => handleScoreHover(true)}
+                onMouseLeave={() => handleScoreHover(false)}
+                className={`relative px-3 py-2 rounded-lg text-center min-w-[70px] ${
+                  isHighlighted('score')
+                    ? 'bg-indigo-100 dark:bg-indigo-900/40 ring-2 ring-indigo-500'
+                    : 'bg-gray-100 dark:bg-gray-700/50'
+                }`}
+              >
                 <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">
                   {t('score')}
                   <svg className="w-3 h-3 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1434,11 +1454,6 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
                 <span className={`text-base font-bold ${isHighlighted('score') ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-900 dark:text-white'}`}>
                   {result.score.toFixed(1)}
                 </span>
-                {/* Tooltip - appears below */}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                  {t('scoreExplanation')}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900 dark:border-b-gray-700"></div>
-                </div>
               </div>
 
               {/* Temperature */}
@@ -1496,6 +1511,23 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
           </div>
         </div>
       </div>
+      </div>
+      {/* Tooltip - positioned outside overflow container, appears above */}
+      {showTooltip && (
+        <div 
+          className="fixed px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg whitespace-nowrap z-[100] shadow-lg pointer-events-none transition-opacity"
+          style={{
+            top: `${tooltipPosition.top}px`,
+            left: `${tooltipPosition.left}px`,
+            transform: 'translate(-50%, -100%)',
+            marginTop: '-0.5rem',
+          }}
+        >
+          {t('scoreExplanation')}
+          {/* Arrow pointing down */}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+        </div>
+      )}
     </div>
   );
 }

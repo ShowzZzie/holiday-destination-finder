@@ -1,3 +1,12 @@
+fastapi[standard]
+uvicorn
 requests
+ryanair-py
+flights
+CurrencyConverter
+Authlib
+redis>=5.0.0
+python-dotenv
 pandas
 python-dateutil
+google-search-results

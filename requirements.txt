@@ -6,5 +6,8 @@ flights
 CurrencyConverter
 Authlib
 redis>=5.0.0
+python-dotenv
+google-search-results
+serpapi
 
 -e .

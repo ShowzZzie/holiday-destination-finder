@@ -8,9 +8,18 @@ version = "0.0.1"
 requires-python = ">=3.11"
 
 dependencies = [
+    "fastapi[standard]",
+    "uvicorn",
     "requests",
+    "ryanair-py",
+    "flights",
+    "CurrencyConverter",
+    "Authlib",
+    "redis>=5.0.0",
+    "python-dotenv",
     "pandas",
     "python-dateutil",
+    "google-search-results",
 ]
 
 [tool.setuptools]
