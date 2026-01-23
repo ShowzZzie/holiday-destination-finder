@@ -45,6 +45,30 @@ const translations: Record<Language, Record<string, string>> = {
     'departure': 'Departure',
     'return': 'Return',
     'score': 'Score',
+    // Sorting & Filtering
+    'sortBy': 'Sort by',
+    'filters': 'Filters',
+    'clearFilters': 'Clear all',
+    'price': 'Price',
+    'region': 'Region',
+    'country': 'Country',
+    'directFlightsOnly': 'Direct flights only',
+    'maxPrice': 'Max price',
+    'minTemperature': 'Min temperature',
+    'noResults': 'No results match your filters',
+    'showingResults': 'Showing {count} of {total} results',
+    // Regions
+    'Iberia': 'Iberia',
+    'Southern Europe': 'Southern Europe',
+    'Western Europe': 'Western Europe',
+    'Northern Europe': 'Northern Europe',
+    // Sidebar
+    'newSearch': 'New Search',
+    'jobHistory': 'Job History',
+    // Score explanation
+    'scoreExplanation': 'Combines price (40%) and weather (60%). Higher = better value.',
+    // Daily averages note
+    'dailyAverages': 'Weather values are daily averages for your trip dates',
   },
   pl: {
     'title': 'Wyszukiwarka Destynacji Wakacyjnych',
@@ -77,6 +101,30 @@ const translations: Record<Language, Record<string, string>> = {
     'departure': 'Wylot',
     'return': 'Powrót',
     'score': 'Punktacja',
+    // Sorting & Filtering
+    'sortBy': 'Sortuj według',
+    'filters': 'Filtry',
+    'clearFilters': 'Wyczyść wszystkie',
+    'price': 'Cena',
+    'region': 'Region',
+    'country': 'Kraj',
+    'directFlightsOnly': 'Tylko loty bezpośrednie',
+    'maxPrice': 'Maksymalna cena',
+    'minTemperature': 'Minimalna temperatura',
+    'noResults': 'Brak wyników pasujących do filtrów',
+    'showingResults': 'Wyświetlanie {count} z {total} wyników',
+    // Regions
+    'Iberia': 'Półwysep Iberyjski',
+    'Southern Europe': 'Europa Południowa',
+    'Western Europe': 'Europa Zachodnia',
+    'Northern Europe': 'Europa Północna',
+    // Sidebar
+    'newSearch': 'Nowe wyszukiwanie',
+    'jobHistory': 'Historia wyszukiwań',
+    // Score explanation
+    'scoreExplanation': 'Łączy cenę (40%) i pogodę (60%). Wyższy = lepsza oferta.',
+    // Daily averages note
+    'dailyAverages': 'Wartości pogodowe to średnie dzienne dla Twojego wyjazdu',
   },
   es: {
     'title': 'Buscador de Destinos Vacacionales',
@@ -109,6 +157,30 @@ const translations: Record<Language, Record<string, string>> = {
     'departure': 'Salida',
     'return': 'Regreso',
     'score': 'Puntuación',
+    // Sorting & Filtering
+    'sortBy': 'Ordenar por',
+    'filters': 'Filtros',
+    'clearFilters': 'Limpiar todo',
+    'price': 'Precio',
+    'region': 'Región',
+    'country': 'País',
+    'directFlightsOnly': 'Solo vuelos directos',
+    'maxPrice': 'Precio máximo',
+    'minTemperature': 'Temperatura mínima',
+    'noResults': 'No hay resultados que coincidan con tus filtros',
+    'showingResults': 'Mostrando {count} de {total} resultados',
+    // Regions
+    'Iberia': 'Iberia',
+    'Southern Europe': 'Europa del Sur',
+    'Western Europe': 'Europa Occidental',
+    'Northern Europe': 'Europa del Norte',
+    // Sidebar
+    'newSearch': 'Nueva búsqueda',
+    'jobHistory': 'Historial',
+    // Score explanation
+    'scoreExplanation': 'Combina precio (40%) y clima (60%). Mayor = mejor valor.',
+    // Daily averages note
+    'dailyAverages': 'Los valores climáticos son promedios diarios para tus fechas',
   },
   pt: {
     'title': 'Localizador de Destinos de Férias',
@@ -141,6 +213,30 @@ const translations: Record<Language, Record<string, string>> = {
     'departure': 'Partida',
     'return': 'Retorno',
     'score': 'Pontuação',
+    // Sorting & Filtering
+    'sortBy': 'Ordenar por',
+    'filters': 'Filtros',
+    'clearFilters': 'Limpar tudo',
+    'price': 'Preço',
+    'region': 'Região',
+    'country': 'País',
+    'directFlightsOnly': 'Apenas voos diretos',
+    'maxPrice': 'Preço máximo',
+    'minTemperature': 'Temperatura mínima',
+    'noResults': 'Nenhum resultado corresponde aos seus filtros',
+    'showingResults': 'Mostrando {count} de {total} resultados',
+    // Regions
+    'Iberia': 'Ibéria',
+    'Southern Europe': 'Europa do Sul',
+    'Western Europe': 'Europa Ocidental',
+    'Northern Europe': 'Europa do Norte',
+    // Sidebar
+    'newSearch': 'Nova busca',
+    'jobHistory': 'Histórico',
+    // Score explanation
+    'scoreExplanation': 'Combina preço (40%) e clima (60%). Maior = melhor valor.',
+    // Daily averages note
+    'dailyAverages': 'Valores climáticos são médias diárias para suas datas',
   },
   de: {
     'title': 'Urlaubsziel-Finder',
@@ -173,6 +269,30 @@ const translations: Record<Language, Record<string, string>> = {
     'departure': 'Abflug',
     'return': 'Rückflug',
     'score': 'Punktzahl',
+    // Sorting & Filtering
+    'sortBy': 'Sortieren nach',
+    'filters': 'Filter',
+    'clearFilters': 'Alle löschen',
+    'price': 'Preis',
+    'region': 'Region',
+    'country': 'Land',
+    'directFlightsOnly': 'Nur Direktflüge',
+    'maxPrice': 'Höchstpreis',
+    'minTemperature': 'Mindesttemperatur',
+    'noResults': 'Keine Ergebnisse entsprechen Ihren Filtern',
+    'showingResults': '{count} von {total} Ergebnissen',
+    // Regions
+    'Iberia': 'Iberien',
+    'Southern Europe': 'Südeuropa',
+    'Western Europe': 'Westeuropa',
+    'Northern Europe': 'Nordeuropa',
+    // Sidebar
+    'newSearch': 'Neue Suche',
+    'jobHistory': 'Suchverlauf',
+    // Score explanation
+    'scoreExplanation': 'Kombiniert Preis (40%) und Wetter (60%). Höher = besserer Wert.',
+    // Daily averages note
+    'dailyAverages': 'Wetterwerte sind Tagesdurchschnitte für Ihre Reisedaten',
   },
   fr: {
     'title': 'Recherche de Destinations de Vacances',
@@ -205,6 +325,30 @@ const translations: Record<Language, Record<string, string>> = {
     'departure': 'Départ',
     'return': 'Retour',
     'score': 'Score',
+    // Sorting & Filtering
+    'sortBy': 'Trier par',
+    'filters': 'Filtres',
+    'clearFilters': 'Tout effacer',
+    'price': 'Prix',
+    'region': 'Région',
+    'country': 'Pays',
+    'directFlightsOnly': 'Vols directs uniquement',
+    'maxPrice': 'Prix maximum',
+    'minTemperature': 'Température minimale',
+    'noResults': 'Aucun résultat ne correspond à vos filtres',
+    'showingResults': 'Affichage de {count} sur {total} résultats',
+    // Regions
+    'Iberia': 'Ibérie',
+    'Southern Europe': 'Europe du Sud',
+    'Western Europe': 'Europe de l\'Ouest',
+    'Northern Europe': 'Europe du Nord',
+    // Sidebar
+    'newSearch': 'Nouvelle recherche',
+    'jobHistory': 'Historique',
+    // Score explanation
+    'scoreExplanation': 'Combine prix (40%) et météo (60%). Plus élevé = meilleure valeur.',
+    // Daily averages note
+    'dailyAverages': 'Les valeurs météo sont des moyennes journalières pour vos dates',
   },
 };
 

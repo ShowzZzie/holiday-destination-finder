@@ -38,13 +38,50 @@ const countryNameToCode: Record<string, string> = {
   'Iceland': 'IS',
 };
 
+// Region mapping based on backend CSV data
+export type Region = 'Iberia' | 'Southern Europe' | 'Western Europe' | 'Northern Europe';
+
+const countryToRegion: Record<string, Region> = {
+  // Iberia
+  'Spain': 'Iberia',
+  'Portugal': 'Iberia',
+  // Southern Europe
+  'Italy': 'Southern Europe',
+  'Greece': 'Southern Europe',
+  'Croatia': 'Southern Europe',
+  'Turkey': 'Southern Europe',
+  'Malta': 'Southern Europe',
+  'Cyprus': 'Southern Europe',
+  // Western Europe
+  'France': 'Western Europe',
+  'Netherlands': 'Western Europe',
+  'Belgium': 'Western Europe',
+  'Austria': 'Western Europe',
+  'Germany': 'Western Europe',
+  'Switzerland': 'Western Europe',
+  // Northern Europe
+  'United Kingdom': 'Northern Europe',
+  'Ireland': 'Northern Europe',
+  'Denmark': 'Northern Europe',
+  'Norway': 'Northern Europe',
+  'Sweden': 'Northern Europe',
+  'Finland': 'Northern Europe',
+  'Iceland': 'Northern Europe',
+};
+
+export const ALL_REGIONS: Region[] = ['Iberia', 'Southern Europe', 'Western Europe', 'Northern Europe'];
+
 export function getCountryCode(countryName: string): string {
   // Try direct lookup
   const code = countryNameToCode[countryName];
   if (code) return code.toLowerCase();
-  
+
   // If not found, return 'XX' as fallback (will show a placeholder)
   return 'xx';
+}
+
+export function getRegion(countryName: string): Region | null {
+  return countryToRegion[countryName] || null;
 }
 
 export function getFlagUrl(countryCode: string, size: 'w20' | 'w40' | 'w80' | 'w160' | 'w320' | 'w640' | 'w1280' | 'w2560' = 'w40'): string {
