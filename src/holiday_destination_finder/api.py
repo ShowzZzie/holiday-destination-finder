@@ -159,7 +159,7 @@ def health():
 
 # Input validation helpers
 _IATA_PATTERN = re.compile(r"^[A-Z]{3}$")
-_VALID_PROVIDERS = {"amadeus", "ryanair", "wizzair"}
+_VALID_PROVIDERS = {"amadeus", "ryanair", "wizzair", "serpapi"}
 
 def _validate_origin(origin: str) -> str:
     """Validate and normalize airport IATA code."""

@@ -544,7 +544,7 @@ export default function Home() {
                 {t('flightProviders')}
               </label>
               <div className="flex flex-wrap gap-4">
-                {['ryanair', 'wizzair', 'amadeus'].map(provider => (
+                {['serpapi', 'ryanair', 'wizzair', 'amadeus'].map(provider => (
                   <label key={provider} className="flex items-center space-x-2 cursor-pointer">
                     <input
                       type="checkbox"
