@@ -50,7 +50,7 @@ export default function Home() {
     start: '',
     end: '',
     trip_length: 7,
-    providers: ['ryanair', 'wizzair'],
+    providers: ['serpapi'],
     top_n: 5,
   });
   
