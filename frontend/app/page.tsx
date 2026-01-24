@@ -110,12 +110,26 @@ function getAirlineLogoUrl(airlineName: string): string | null {
 function AirlineDisplay({ airlines }: { airlines: string }) {
   if (!airlines) return null;
 
+  const truncateName = (name: string, maxLen: number = 24) => {
+    if (name.length <= maxLen) return name;
+    
+    // Find the last space within the limit to avoid cutting words
+    const truncated = name.substring(0, maxLen);
+    const lastSpace = truncated.lastIndexOf(' ');
+    
+    if (lastSpace > maxLen * 0.6) { // Only cut at space if it's reasonably far in
+      return truncated.substring(0, lastSpace) + '...';
+    }
+    return truncated + '...';
+  };
+
   // Split airlines by common separators
   const airlineList = airlines.split(/ and | \/ | \| |, /).map(a => a.trim()).filter(Boolean);
   
-  if (airlineList.length === 0) return <span>{airlines}</span>;
+  if (airlineList.length === 0) return <span>{truncateName(airlines)}</span>;
 
   const firstAirline = airlineList[0];
+  const truncatedFirst = truncateName(firstAirline);
   const remainingCount = airlineList.length - 1;
   const logoUrl = getAirlineLogoUrl(firstAirline);
   const isSimpleIcon = logoUrl?.includes('cdn.jsdelivr.net');
@@ -136,7 +150,7 @@ function AirlineDisplay({ airlines }: { airlines: string }) {
         </div>
       )}
       <span className="whitespace-nowrap flex items-center">
-        {firstAirline}
+        {truncatedFirst}
         {remainingCount > 0 && (
           <span className="ml-1.5 text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-full font-medium border border-gray-200 dark:border-gray-700 leading-none">
             +{remainingCount}
@@ -150,12 +164,12 @@ function AirlineDisplay({ airlines }: { airlines: string }) {
 export default function Home() {
   const { t } = useLanguage();
   const [formData, setFormData] = useState<SearchParams>({
-    origin: 'WRO',
+    origin: '',
     start: '',
     end: '',
     trip_length: 7,
     providers: ['serpapi'],
-    top_n: 5,
+    top_n: 10,
   });
   
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
@@ -524,17 +538,45 @@ export default function Home() {
         throw new Error("Please select an origin from the suggestions (start typing a city, country, or airport name).");
       }
 
-      // Validate that kgmid origins only work with serpapi-only
+      // Expand origin if it's a kgmid (city/country) and only SerpAPI is selected
+      // This is because SerpAPI google_travel_explore engine works much better with IATA codes
+      // and often returns empty results for country/city kgmids for flexible dates.
+      let finalOrigin = formData.origin;
       const isOnlySerpApi = formData.providers.length === 1 && formData.providers[0] === 'serpapi';
+      
+      if (isOnlySerpApi && finalOrigin.startsWith('/')) {
+        // Try to find if it's a country
+        const countryMatch = COUNTRIES.find(c => c.kgmid === finalOrigin);
+        if (countryMatch) {
+          finalOrigin = countryMatch.airports.map(a => a.iata).join(',');
+          console.log(`🗺️ Expanded country ${countryMatch.name} to airports: ${finalOrigin}`);
+        } else {
+          // Try to find if it's a city kgmid
+          const cityAirports: string[] = [];
+          COUNTRIES.forEach(c => {
+            c.airports.forEach(a => {
+              if (a.city_kgmid === finalOrigin) {
+                cityAirports.push(a.iata);
+              }
+            });
+          });
+          if (cityAirports.length > 0) {
+            finalOrigin = cityAirports.join(',');
+            console.log(`🏙️ Expanded city kgmid to airports: ${finalOrigin}`);
+          }
+        }
+      }
+
+      // Validate that kgmid origins only work with serpapi-only
       const originIsKgmid = formData.origin.startsWith('/');
       if (originIsKgmid && !isOnlySerpApi) {
         throw new Error("City/country search requires SerpAPI only. Please select a specific airport or use only SerpAPI as the provider.");
       }
 
       // Debug: log what we're sending
-      console.log('🚀 Submitting search:', { origin: formData.origin, providers: formData.providers });
+      console.log('🚀 Submitting search:', { origin: finalOrigin, originalOrigin: formData.origin, providers: formData.providers });
 
-      const response = await startSearch(formData);
+      const response = await startSearch({ ...formData, origin: finalOrigin });
       console.log('🔍 Search Job Created - Job ID:', response.job_id);
       console.log('📍 Direct API URL:', `${process.env.NEXT_PUBLIC_API_URL || 'https://holiday-destination-finder.onrender.com'}/jobs/${response.job_id}`);
       
@@ -1872,7 +1914,7 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
                   {result.city}
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {result.country} · {result.departure_airport ? `${result.departure_airport} → ${result.airport}` : result.airport}
+                  {result.country} · {result.airport}
                 </p>
               </div>
             </div>
@@ -1942,7 +1984,7 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
                 {result.city}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {result.country} · {result.departure_airport ? `${result.departure_airport} → ${result.airport}` : result.airport}
+                {result.country} · {result.airport}
               </p>
               {/* Flight dates inline on desktop */}
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
