@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { startSearch, getJobStatus, checkHealth, cancelJob, SearchParams, JobStatus, SearchResult } from '@/lib/api';
 import { getCountryCode, getFlagUrl, getRegion, ALL_REGIONS, Region } from '@/lib/country-flags';
@@ -90,14 +90,14 @@ function AirlineDisplay({ airlines }: { airlines: string }) {
   return (
     <span className="flex items-center gap-2" title={airlines}>
       {logoUrl && (
-        <div className="relative w-5 h-5 flex items-center justify-center">
+        <div className="relative w-7 h-7 flex-shrink-0 flex items-center justify-center">
           <Image 
             src={logoUrl}
             alt={firstAirline}
-            width={20}
-            height={20}
-            className={`inline-block object-contain opacity-90 transition-all ${
-              isSimpleIcon ? 'dark:invert dark:brightness-200' : ''
+            width={28}
+            height={28}
+            className={`inline-block object-contain transition-all ${
+              isSimpleIcon ? 'dark:invert dark:brightness-200' : 'dark:brightness-110 dark:contrast-125'
             }`}
           />
         </div>
@@ -494,7 +494,7 @@ export default function Home() {
                   id="origin"
                   value={formData.origin}
                   onChange={(e) => setFormData({ ...formData, origin: e.target.value.toUpperCase() })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-400 autofill:bg-white autofill:text-gray-900"
+                  className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-400 autofill:bg-white autofill:text-gray-900"
                   placeholder="WRO"
                   maxLength={3}
                   required
@@ -548,7 +548,7 @@ export default function Home() {
                       setFormData({ ...formData, trip_length: num });
                     }
                   }}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white"
                   min="1"
                   required
                   disabled={isSearching}
@@ -586,7 +586,7 @@ export default function Home() {
                       setFormData({ ...formData, top_n: num });
                     }
                   }}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white"
                   min="1"
                   max="50"
                   required
@@ -937,6 +937,50 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Stats column widths state for dynamic alignment
+  const [colWidths, setColWidths] = useState({
+    score: 0,
+    temp: 0,
+    rain: 0,
+    stops: 0,
+    price: 0
+  });
+
+  // Ruler refs for measuring content
+  const rulerRefs = {
+    score: useRef<HTMLDivElement>(null),
+    temp: useRef<HTMLDivElement>(null),
+    rain: useRef<HTMLDivElement>(null),
+    stops: useRef<HTMLDivElement>(null),
+    price: useRef<HTMLDivElement>(null)
+  };
+
+  // Effect to measure content whenever results or language changes
+  useLayoutEffect(() => {
+    const measure = () => {
+      const newWidths = { ...colWidths };
+      let changed = false;
+
+      (Object.keys(rulerRefs) as Array<keyof typeof rulerRefs>).forEach(key => {
+        const ref = rulerRefs[key];
+        if (ref.current) {
+          // Measure the width and add padding buffer (px-1.5 = 12px total)
+          const width = Math.ceil(ref.current.getBoundingClientRect().width) + 12;
+          if (width !== colWidths[key]) {
+            newWidths[key] = width;
+            changed = true;
+          }
+        }
+      });
+
+      if (changed) {
+        setColWidths(newWidths);
+      }
+    };
+
+    measure();
+  }, [results, t, formatPrice]);
 
   // Get unique countries and regions from results
   const availableCountries = useMemo(() => {
@@ -1335,7 +1379,44 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
           </button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div 
+          className="space-y-4"
+          style={{
+            // @ts-ignore
+            '--col-score': `${colWidths.score}px`,
+            '--col-temp': `${colWidths.temp}px`,
+            '--col-rain': `${colWidths.rain}px`,
+            '--col-stops': `${colWidths.stops}px`,
+            '--col-price': `${colWidths.price}px`,
+          }}
+        >
+          {/* Hidden measurement ruler */}
+          <div className="sr-only invisible h-0 overflow-hidden flex" aria-hidden="true">
+            <div ref={rulerRefs.score} className="px-1.5 py-1 font-bold text-base flex flex-col items-center">
+              <span className="text-xs flex items-center gap-1">
+                {t('score')}
+                <div className="w-3 h-3" />
+              </span>
+              <span>10.0</span>
+            </div>
+            <div ref={rulerRefs.temp} className="px-1.5 py-1 font-bold text-base flex flex-col items-center">
+              <span className="text-xs">{t('temperature')}</span>
+              <span>-10.4°C</span>
+            </div>
+            <div ref={rulerRefs.rain} className="px-1.5 py-1 font-bold text-base flex flex-col items-center">
+              <span className="text-xs">{t('rainfall')}</span>
+              <span>10.5mm</span>
+            </div>
+            <div ref={rulerRefs.stops} className="px-1.5 py-1 font-bold text-base flex flex-col items-center">
+              <span className="text-xs">{t('stopsLabel')}</span>
+              <span>{t('direct')}</span>
+            </div>
+            <div ref={rulerRefs.price} className="px-1.5 py-1 font-bold text-lg flex flex-col items-center">
+              <span className="text-xs">{t('price')}</span>
+              <span>{formatPrice(1234.56)}</span>
+            </div>
+          </div>
+
           {sortedResults.map((result, index) => (
             <DestinationCard
               key={`${result.city}-${result.airport}-${index}`}
@@ -1423,27 +1504,27 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
 
           {/* Stats Grid - 2x2 */}
           <div className="grid grid-cols-2 gap-2 mb-3">
-            <div className={`px-2.5 py-1.5 rounded-lg ${isHighlighted('score') ? 'bg-indigo-100 dark:bg-indigo-900/40' : 'bg-gray-100 dark:bg-gray-700/50'}`}>
-              <span className="text-xs text-gray-500 dark:text-gray-400 block">{t('score')}</span>
-              <span className={`text-sm font-semibold ${isHighlighted('score') ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-900 dark:text-white'}`}>
+            <div className={`px-1.5 py-1 rounded-lg flex flex-col items-center justify-center ${isHighlighted('score') ? 'bg-indigo-100 dark:bg-indigo-900/40' : 'bg-gray-100 dark:bg-gray-700/50'}`}>
+              <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{t('score')}</span>
+              <span className={`text-sm font-semibold whitespace-nowrap ${isHighlighted('score') ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-900 dark:text-white'}`}>
                 {result.score.toFixed(1)}
               </span>
             </div>
-            <div className={`px-2.5 py-1.5 rounded-lg ${isHighlighted('temperature') ? 'bg-orange-100 dark:bg-orange-900/40' : 'bg-gray-100 dark:bg-gray-700/50'}`}>
-              <span className="text-xs text-gray-500 dark:text-gray-400 block">{t('temperature')}</span>
-              <span className={`text-sm font-semibold ${isHighlighted('temperature') ? 'text-orange-700 dark:text-orange-300' : 'text-gray-900 dark:text-white'}`}>
+            <div className={`px-1.5 py-1 rounded-lg flex flex-col items-center justify-center ${isHighlighted('temperature') ? 'bg-orange-100 dark:bg-orange-900/40' : 'bg-gray-100 dark:bg-gray-700/50'}`}>
+              <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{t('temperature')}</span>
+              <span className={`text-sm font-semibold whitespace-nowrap ${isHighlighted('temperature') ? 'text-orange-700 dark:text-orange-300' : 'text-gray-900 dark:text-white'}`}>
                 {result.avg_temp_c.toFixed(1)}°C
               </span>
             </div>
-            <div className={`px-2.5 py-1.5 rounded-lg ${isHighlighted('rainfall') ? 'bg-blue-100 dark:bg-blue-900/40' : 'bg-gray-100 dark:bg-gray-700/50'}`}>
-              <span className="text-xs text-gray-500 dark:text-gray-400 block">{t('rainfall')}</span>
-              <span className={`text-sm font-semibold ${isHighlighted('rainfall') ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
+            <div className={`px-1.5 py-1 rounded-lg flex flex-col items-center justify-center ${isHighlighted('rainfall') ? 'bg-blue-100 dark:bg-blue-900/40' : 'bg-gray-100 dark:bg-gray-700/50'}`}>
+              <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{t('rainfall')}</span>
+              <span className={`text-sm font-semibold whitespace-nowrap ${isHighlighted('rainfall') ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
                 {result.avg_precip_mm_per_day.toFixed(1)} mm
               </span>
             </div>
-            <div className="px-2.5 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700/50">
-              <span className="text-xs text-gray-500 dark:text-gray-400 block">{t('stopsLabel')}</span>
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+            <div className="px-1.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-700/50 flex flex-col items-center justify-center">
+              <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{t('stopsLabel')}</span>
+              <span className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
                 {result.total_stops === 0 ? t('direct') : `${result.total_stops}`}
               </span>
             </div>
@@ -1490,73 +1571,75 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
               </p>
             </div>
 
-            {/* Stats */}
-            <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Stats - using dynamic widths from CSS variables */}
+            <div className="grid grid-cols-5 gap-2 flex-shrink-0" style={{ 
+              gridTemplateColumns: 'var(--col-score, 70px) var(--col-temp, 90px) var(--col-rain, 90px) var(--col-stops, 80px) var(--col-price, 100px)' 
+            }}>
               {/* Score with tooltip */}
-              <div 
+              <div
                 ref={scoreButtonRef}
                 onMouseEnter={() => handleScoreHover(true)}
                 onMouseLeave={() => handleScoreHover(false)}
-                className={`relative px-3 py-2 rounded-lg text-center min-w-[70px] ${
+                className={`relative px-1.5 py-1 rounded-lg flex flex-col items-center justify-center ${
                   isHighlighted('score')
                     ? 'bg-indigo-100 dark:bg-indigo-900/40 ring-2 ring-indigo-500'
                     : 'bg-gray-100 dark:bg-gray-700/50'
                 }`}
               >
-                <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">
+                <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 whitespace-nowrap">
                   {t('score')}
                   <svg className="w-3 h-3 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </span>
-                <span className={`text-base font-bold ${isHighlighted('score') ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-900 dark:text-white'}`}>
+                <span className={`text-base font-bold whitespace-nowrap ${isHighlighted('score') ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-900 dark:text-white'}`}>
                   {result.score.toFixed(1)}
                 </span>
               </div>
 
               {/* Temperature */}
-              <div className={`px-3 py-2 rounded-lg text-center min-w-[70px] ${
+              <div className={`px-1.5 py-1 rounded-lg flex flex-col items-center justify-center ${
                 isHighlighted('temperature')
                   ? 'bg-orange-100 dark:bg-orange-900/40 ring-2 ring-orange-500'
                   : 'bg-gray-100 dark:bg-gray-700/50'
               }`}>
-                <span className="text-xs text-gray-500 dark:text-gray-400 block">{t('temperature')}</span>
-                <span className={`text-base font-bold ${isHighlighted('temperature') ? 'text-orange-700 dark:text-orange-300' : 'text-gray-900 dark:text-white'}`}>
+                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{t('temperature')}</span>
+                <span className={`text-base font-bold whitespace-nowrap ${isHighlighted('temperature') ? 'text-orange-700 dark:text-orange-300' : 'text-gray-900 dark:text-white'}`}>
                   {result.avg_temp_c.toFixed(1)}°C
                 </span>
               </div>
 
               {/* Rainfall */}
-              <div className={`px-3 py-2 rounded-lg text-center min-w-[70px] ${
+              <div className={`px-1.5 py-1 rounded-lg flex flex-col items-center justify-center ${
                 isHighlighted('rainfall')
                   ? 'bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-500'
                   : 'bg-gray-100 dark:bg-gray-700/50'
               }`}>
-                <span className="text-xs text-gray-500 dark:text-gray-400 block">{t('rainfall')}</span>
-                <span className={`text-base font-bold ${isHighlighted('rainfall') ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
+                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{t('rainfall')}</span>
+                <span className={`text-base font-bold whitespace-nowrap ${isHighlighted('rainfall') ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
                   {result.avg_precip_mm_per_day.toFixed(1)}mm
                 </span>
               </div>
 
               {/* Stops */}
-              <div className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700/50 text-center min-w-[70px]">
-                <span className="text-xs text-gray-500 dark:text-gray-400 block">{t('stopsLabel')}</span>
-                <span className="text-base font-bold text-gray-900 dark:text-white">
+              <div className="px-1.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-700/50 flex flex-col items-center justify-center">
+                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{t('stopsLabel')}</span>
+                <span className="text-base font-bold text-gray-900 dark:text-white whitespace-nowrap">
                   {result.total_stops === 0 ? t('direct') : result.total_stops}
                 </span>
               </div>
-            </div>
 
-            {/* Price */}
-            <div className={`flex-shrink-0 px-4 py-2 rounded-lg text-center min-w-[90px] ${
-              isHighlighted('price')
-                ? 'bg-green-100 dark:bg-green-900/40 ring-2 ring-green-500'
-                : 'bg-green-50 dark:bg-green-900/20'
-            }`}>
-              <span className="text-xs text-gray-500 dark:text-gray-400 block">{t('price')}</span>
-              <span className={`text-xl font-bold ${isHighlighted('price') ? 'text-green-700 dark:text-green-300' : 'text-green-600 dark:text-green-400'}`}>
-                {formatPrice(result.flight_price)}
-              </span>
+              {/* Price */}
+              <div className={`px-1.5 py-1 rounded-lg flex flex-col items-center justify-center ${
+                isHighlighted('price')
+                  ? 'bg-green-100 dark:bg-green-900/40 ring-2 ring-green-500'
+                  : 'bg-green-50 dark:bg-green-900/20'
+              }`}>
+                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{t('price')}</span>
+                <span className={`text-lg font-bold whitespace-nowrap ${isHighlighted('price') ? 'text-green-700 dark:text-green-300' : 'text-green-600 dark:text-green-400'}`}>
+                  {formatPrice(result.flight_price)}
+                </span>
+              </div>
             </div>
 
             {/* Airline - right aligned with fixed width to anchor other tiles */}

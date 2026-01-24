@@ -97,7 +97,7 @@ const translations: Record<Language, Record<string, string>> = {
     'rainfall': 'Opady',
     'stopsLabel': 'Przesiadki',
     'airline': 'Linia lotnicza',
-    'direct': 'Bezpośredni',
+    'direct': 'Bezp.',
     'stop': 'przesiadka',
     'stops': 'przesiadki',
     'departure': 'Wylot',

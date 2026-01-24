@@ -156,7 +156,7 @@ export default function DateRangePicker({
         type="button"
         onClick={handleOpen}
         disabled={disabled}
-        className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+        className={`w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg
           bg-white dark:bg-gray-700 text-left
           focus:ring-2 focus:ring-indigo-500 focus:outline-none
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-gray-400 dark:hover:border-gray-500'}
@@ -167,7 +167,7 @@ export default function DateRangePicker({
             <svg className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               <span className={startDate ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-400 dark:text-gray-500'}>
                 {startDate ? formatDisplayDate(startDate) : startLabel}
               </span>
