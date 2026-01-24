@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
         hostname: 'cdn.jsdelivr.net',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'pics.avs.io',
+        pathname: '/**',
+      },
     ],
   },
 };

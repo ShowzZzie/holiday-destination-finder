@@ -5,42 +5,113 @@ import Image from 'next/image';
 import { startSearch, getJobStatus, checkHealth, cancelJob, SearchParams, JobStatus, SearchResult } from '@/lib/api';
 import { getCountryCode, getFlagUrl, getRegion, ALL_REGIONS, Region } from '@/lib/country-flags';
 import { useLanguage } from '@/app/contexts/LanguageContext';
+import { useCurrency } from '@/app/contexts/CurrencyContext';
+import DateRangePicker from '@/app/components/DateRangePicker';
+
+// Mapping of common airline names/codes to IATA codes for logo fetching
+const AIRLINE_MAPPING: Record<string, string> = {
+  'ryanair': 'FR',
+  'wizz air': 'W6',
+  'wizzair': 'W6',
+  'lufthansa': 'LH',
+  'easyjet': 'U2',
+  'vueling': 'VY',
+  'norwegian': 'DY',
+  'british airways': 'BA',
+  'klm': 'KL',
+  'air france': 'AF',
+  'lot polish airlines': 'LO',
+  'lot': 'LO',
+  'swiss': 'LX',
+  'austrian': 'OS',
+  'air dolomiti': 'EN',
+  'sas': 'SK',
+  'tap air portugal': 'TP',
+  'tap': 'TP',
+  'iberia': 'IB',
+  'finnair': 'AY',
+  'aegean': 'A3',
+  'turkish airlines': 'TK',
+  'pegasus': 'PC',
+  'eurowings': 'EW',
+  'volotea': 'V7',
+  'transavia': 'HV',
+  'jet2': 'LS',
+  'condor': 'DE',
+  'air baltic': 'BT',
+  'airbaltic': 'BT',
+  'brussels airlines': 'SN',
+  'luxair': 'LG',
+};
 
 // Helper function to get airline logo URL
 function getAirlineLogoUrl(airlineName: string): string | null {
   const normalized = airlineName.toLowerCase();
-  if (normalized.includes('ryanair') || normalized.includes('fr')) {
-    // Ryanair logo from SimpleIcons or a CDN
-    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/ryanair.svg';
+  
+  // 1. Prioritize specific brand logos (Ryanair, Wizz) as requested
+  if (normalized.includes('ryanair')) return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/ryanair.svg';
+  if (normalized.includes('wizz')) return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/wizzair.svg';
+
+  // 2. Check our explicit mapping for others
+  for (const [name, code] of Object.entries(AIRLINE_MAPPING)) {
+    if (normalized.includes(name)) {
+      return `https://pics.avs.io/200/200/${code}.png`;
+    }
   }
-  if (normalized.includes('wizz') || normalized.includes('w6')) {
-    // Wizz Air logo from SimpleIcons or a CDN
-    return 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/wizzair.svg';
+
+  // 3. If the airline name looks like an IATA code (2 characters)
+  if (airlineName.length === 2 && /^[A-Z0-9]{2}$/.test(airlineName)) {
+    return `https://pics.avs.io/200/200/${airlineName}.png`;
   }
+
+  // 4. Try to extract a 2-letter code if the string starts with one (e.g. "LX 1234")
+  const codeMatch = airlineName.match(/^([A-Z0-9]{2})/);
+  if (codeMatch) {
+    return `https://pics.avs.io/200/200/${codeMatch[1]}.png`;
+  }
+
   return null;
 }
 
 // Component to render airline name with optional logo
 function AirlineDisplay({ airlines }: { airlines: string }) {
-  const logoUrl = getAirlineLogoUrl(airlines);
+  if (!airlines) return null;
+
+  // Split airlines by common separators
+  const airlineList = airlines.split(/ and | \/ | \| |, /).map(a => a.trim()).filter(Boolean);
   
-  if (logoUrl) {
-    return (
-      <span className="flex items-center gap-1.5">
-        <Image 
-          src={logoUrl}
-          alt={airlines}
-          width={16}
-          height={16}
-          className="inline-block"
-          style={{ filter: 'invert(1)', opacity: 0.8 }}
-        />
-        <span>{airlines}</span>
+  if (airlineList.length === 0) return <span>{airlines}</span>;
+
+  const firstAirline = airlineList[0];
+  const remainingCount = airlineList.length - 1;
+  const logoUrl = getAirlineLogoUrl(firstAirline);
+  const isSimpleIcon = logoUrl?.includes('cdn.jsdelivr.net');
+  
+  return (
+    <span className="flex items-center gap-2" title={airlines}>
+      {logoUrl && (
+        <div className="relative w-5 h-5 flex items-center justify-center">
+          <Image 
+            src={logoUrl}
+            alt={firstAirline}
+            width={20}
+            height={20}
+            className={`inline-block object-contain opacity-90 transition-all ${
+              isSimpleIcon ? 'dark:invert dark:brightness-200' : ''
+            }`}
+          />
+        </div>
+      )}
+      <span className="whitespace-nowrap flex items-center">
+        {firstAirline}
+        {remainingCount > 0 && (
+          <span className="ml-1.5 text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-full font-medium border border-gray-200 dark:border-gray-700 leading-none">
+            +{remainingCount}
+          </span>
+        )}
       </span>
-    );
-  }
-  
-  return <span>{airlines}</span>;
+    </span>
+  );
 }
 
 export default function Home() {
@@ -432,31 +503,16 @@ export default function Home() {
               </div>
 
               <div>
-                <label htmlFor="start" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('startDate')}
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('travelDates')}
                 </label>
-                <input
-                  type="date"
-                  id="start"
-                  value={formData.start}
-                  onChange={(e) => setFormData({ ...formData, start: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-60"
-                  required
-                  disabled={isSearching}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="end" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('endDate')}
-                </label>
-                <input
-                  type="date"
-                  id="end"
-                  value={formData.end}
-                  onChange={(e) => setFormData({ ...formData, end: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-60"
-                  required
+                <DateRangePicker
+                  startDate={formData.start}
+                  endDate={formData.end}
+                  onStartChange={(date) => setFormData(prev => ({ ...prev, start: date }))}
+                  onEndChange={(date) => setFormData(prev => ({ ...prev, end: date }))}
+                  startLabel={t('startDate')}
+                  endLabel={t('endDate')}
                   disabled={isSearching}
                 />
               </div>
@@ -876,6 +932,7 @@ const defaultFilters: Filters = {
 
 function ResultsDisplay({ results }: { results: SearchResult[] }) {
   const { t } = useLanguage();
+  const { formatPrice } = useCurrency();
   const [sortField, setSortField] = useState<SortField>('score');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filters, setFilters] = useState<Filters>(defaultFilters);
@@ -1225,7 +1282,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
             ))}
             {filters.maxPrice !== null && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 text-sm rounded-full">
-                ≤ €{filters.maxPrice}
+                ≤ {formatPrice(filters.maxPrice)}
                 <button onClick={() => setFilters(prev => ({ ...prev, maxPrice: null }))} className="hover:text-indigo-600">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1295,6 +1352,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
 
 function DestinationCard({ result, rank, highlightField }: { result: SearchResult; rank: number; highlightField: SortField }) {
   const { t } = useLanguage();
+  const { formatPrice } = useCurrency();
   const countryCode = getCountryCode(result.country);
   const flagUrl = getFlagUrl(countryCode, 'w2560');
   const isTopResult = rank === 1;
@@ -1358,7 +1416,7 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
             </div>
             <div className="text-right">
               <div className={`text-lg font-bold ${isHighlighted('price') ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
-                €{result.flight_price.toFixed(0)}
+                {formatPrice(result.flight_price)}
               </div>
             </div>
           </div>
@@ -1497,12 +1555,12 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
             }`}>
               <span className="text-xs text-gray-500 dark:text-gray-400 block">{t('price')}</span>
               <span className={`text-xl font-bold ${isHighlighted('price') ? 'text-green-700 dark:text-green-300' : 'text-green-600 dark:text-green-400'}`}>
-                €{result.flight_price.toFixed(0)}
+                {formatPrice(result.flight_price)}
               </span>
             </div>
 
-            {/* Airline - right aligned */}
-            <div className="flex-shrink-0 min-w-[100px] flex flex-col items-end justify-center">
+            {/* Airline - right aligned with fixed width to anchor other tiles */}
+            <div className="flex-shrink-0 w-[170px] flex flex-col items-end justify-center">
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{t('airline')}</div>
               <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center justify-end">
                 <AirlineDisplay airlines={result.airlines} />

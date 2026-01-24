@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
+import { useCurrency, CURRENCIES, CURRENCY_INFO } from '@/app/contexts/CurrencyContext';
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
+  const { currency, setCurrency } = useCurrency();
   const [mounted, setMounted] = useState(false);
 
   // Prevent hydration mismatch
@@ -38,6 +40,26 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          {/* Currency Selector */}
+          <div className="relative">
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value as typeof currency)}
+              className="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md px-2 sm:px-3 py-1.5 sm:py-2 pr-6 sm:pr-7 text-xs sm:text-sm font-medium text-gray-900 dark:text-white cursor-pointer hover:border-gray-400 dark:hover:border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent"
+            >
+              {CURRENCIES.map((curr) => (
+                <option key={curr} value={curr}>
+                  {CURRENCY_INFO[curr].symbol} {curr}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1.5 sm:pr-2">
+              <svg className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+
           {/* Language Selector */}
           <div className="relative">
             <select
