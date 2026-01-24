@@ -161,15 +161,52 @@ def health():
 _IATA_PATTERN = re.compile(r"^[A-Z]{3}$")
 _VALID_PROVIDERS = {"amadeus", "ryanair", "wizzair", "serpapi"}
 
-def _validate_origin(origin: str) -> str:
+def _validate_origin_iata(origin: str) -> str:
     """Validate and normalize airport IATA code."""
-    origin = origin.strip().upper()
+    origin = origin.strip()
+    if origin.startswith('/'):
+        # kgmid passed but non-serpapi provider selected - give clear error
+        raise HTTPException(
+            status_code=422,
+            detail=f"City/country search (Google ID '{origin}') requires SerpAPI provider only. "
+                   f"Please select a specific airport or use only SerpAPI as the provider."
+        )
+
+    origin = origin.upper()
     if not _IATA_PATTERN.match(origin):
         raise HTTPException(
             status_code=422,
             detail=f"Invalid origin '{origin}': must be a 3-letter IATA airport code (e.g., WRO, LHR, JFK)"
         )
     return origin
+
+def _validate_origin_serpapi(origin: str) -> str:
+    """Validate origin for SerpAPI (supports IATA or kgmid)."""
+    origin = origin.strip()
+    if origin.startswith('/'):
+        # kgmid is case-sensitive but usually lowercase. We support /m/ and /g/.
+        if not re.match(r"^/(m|g)/[A-Za-z0-9_]+$", origin, re.IGNORECASE):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid Google ID '{origin}': must start with /m/ or /g/"
+            )
+        return origin
+    
+    # Otherwise treat as IATA
+    upper = origin.upper()
+    if _IATA_PATTERN.match(upper):
+        return upper
+        
+    raise HTTPException(
+        status_code=422,
+        detail=f"Invalid origin '{origin}': must be a 3-letter IATA code or a Google ID starting with /m/ or /g/."
+    )
+
+def _validate_origin_for_providers(origin: str, providers: List[str]) -> str:
+    """Validate origin based on selected providers."""
+    if any(p.lower() != "serpapi" for p in providers):
+        return _validate_origin_iata(origin)
+    return _validate_origin_serpapi(origin)
 
 def _validate_dates(start: date, end: date, trip_length: int) -> None:
     """Validate date range and trip length compatibility."""
@@ -225,11 +262,11 @@ def search(
     providers: List[str] = Query(["ryanair", "wizzair"]),
     top_n: int = Query(10),
 ):
+    providers = _validate_providers(providers)
     # Validate all inputs
-    origin = _validate_origin(origin)
+    origin = _validate_origin_for_providers(origin, providers)
     trip_length = _validate_trip_length(trip_length)
     _validate_dates(start, end, trip_length)
-    providers = _validate_providers(providers)
     top_n = _validate_top_n(top_n)
 
     params = {

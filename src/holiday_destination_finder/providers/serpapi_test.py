@@ -123,7 +123,7 @@ def discover_destinations(
     One/few API calls return everything needed for scoring.
 
     Args:
-        origin: Departure airport IATA code (e.g., "WRO")
+        origin: Departure airport IATA code (e.g., "WRO") or kgmid (e.g. "/m/0861k")
         from_date: Earliest departure date (YYYY-MM-DD)
         to_date: Latest return date (YYYY-MM-DD)
         trip_length: Trip duration in days
@@ -144,7 +144,9 @@ def discover_destinations(
             "ret_date": "2026-06-22",
         }
     """
-    origin = origin.upper().strip()
+    origin = origin.strip()
+    if not origin.startswith('/'):
+        origin = origin.upper()
 
     if trip_length <= 0:
         raise ValueError("trip_length must be > 0")

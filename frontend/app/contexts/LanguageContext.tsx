@@ -17,7 +17,7 @@ const translations: Record<Language, Record<string, string>> = {
   en: {
     'title': 'Holiday Destination Finder',
     'subtitle': 'Discover the perfect holiday destination based on flight prices and weather',
-    'origin': 'Origin Airport (IATA)',
+    'origin': 'Departure Location',
     'travelDates': 'Travel Dates',
     'startDate': 'Start Date',
     'endDate': 'End Date',
@@ -74,7 +74,7 @@ const translations: Record<Language, Record<string, string>> = {
   pl: {
     'title': 'Wyszukiwarka Destynacji Wakacyjnych',
     'subtitle': 'Odkryj idealną destynację wakacyjną na podstawie cen lotów i pogody',
-    'origin': 'Lotnisko wylotu (IATA)',
+    'origin': 'Miejsce wylotu',
     'travelDates': 'Daty podróży',
     'startDate': 'Data rozpoczęcia',
     'endDate': 'Data zakończenia',

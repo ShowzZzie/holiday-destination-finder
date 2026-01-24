@@ -3,6 +3,15 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { startSearch, getJobStatus, checkHealth, cancelJob, SearchParams, JobStatus, SearchResult } from '@/lib/api';
+import { COUNTRIES, Country, Airport as AirportData } from '@/lib/airports';
+
+// City grouping for autocomplete
+interface CityGroup {
+  name: string;
+  kgmid: string;
+  countryName: string;
+  airports: AirportData[];
+}
 import { getCountryCode, getFlagUrl, getRegion, ALL_REGIONS, Region } from '@/lib/country-flags';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { useCurrency } from '@/app/contexts/CurrencyContext';
@@ -139,6 +148,206 @@ export default function Home() {
   // Local state for number inputs to allow empty values during typing
   const [tripLengthInput, setTripLengthInput] = useState<string>('7');
   const [topNInput, setTopNInput] = useState<string>('5');
+
+  // Origin autocomplete state
+  const [originInput, setOriginInput] = useState<string>('Wrocław (WRO)');
+  const [originSuggestions, setOriginSuggestions] = useState<{
+    countries: Country[];
+    cities: CityGroup[];
+    airports: AirportData[];
+  }>({ countries: [], cities: [], airports: [] });
+  const [expandedCountries, setExpandedCountries] = useState<Set<string>>(new Set());
+  const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set());
+  const [showOriginSuggestions, setShowOriginSuggestions] = useState(false);
+  const originRef = useRef<HTMLDivElement>(null);
+
+  // Filter based on input
+  useEffect(() => {
+    const q = originInput.trim().toLowerCase();
+
+    // Check if input looks like a previously selected label "City (IATA)", "Country", or "City (all airports)"
+    // and if we should suppress suggestions
+    const isExactSelection = COUNTRIES.some(c =>
+      c.name === originInput ||
+      c.airports.some(a =>
+        `${a.city} (${a.iata})` === originInput ||
+        (a.city_kgmid && `${a.city} (all airports)` === originInput)
+      )
+    );
+
+    if (!isExactSelection && originInput.trim() !== '') {
+      // If user is typing and hasn't made an explicit selection yet,
+      // clear the origin ID to ensure they must pick a suggestion.
+      setFormData(prev => ({ ...prev, origin: '' }));
+    }
+
+    if (q.length < 2 || isExactSelection) {
+      setOriginSuggestions({ countries: [], cities: [], airports: [] });
+      return;
+    }
+
+    // Check if only SerpAPI is selected - kgmid (city/country) only works with SerpAPI
+    const onlySerpApi = formData.providers.length === 1 && formData.providers[0] === 'serpapi';
+
+    const matchedCountries: Country[] = [];
+    const matchedCities: CityGroup[] = [];
+    const matchedAirports: AirportData[] = [];
+
+    // Track cities we've already added to avoid duplicates
+    const addedCityKgmids = new Set<string>();
+
+    COUNTRIES.forEach(country => {
+      const countryMatches = country.name.toLowerCase().includes(q);
+
+      if (countryMatches) {
+        // Only show country selection if only SerpAPI is selected
+        if (onlySerpApi) {
+          matchedCountries.push(country);
+        } else {
+          // When other providers are selected, show all airports from matching country
+          matchedAirports.push(...country.airports);
+        }
+      } else {
+        // Check for city name matches - group by city
+        const cityMatches = new Map<string, AirportData[]>();
+        const directAirportMatches: AirportData[] = [];
+
+        country.airports.forEach(airport => {
+          const cityNameMatches = airport.city.toLowerCase().includes(q);
+          const iataMatches = airport.iata.toLowerCase().includes(q);
+          const airportNameMatches = airport.name.toLowerCase().includes(q);
+
+          if (cityNameMatches && airport.city_kgmid) {
+            // City name matched - group by city_kgmid
+            const key = airport.city_kgmid;
+            if (!cityMatches.has(key)) {
+              cityMatches.set(key, []);
+            }
+            cityMatches.get(key)!.push(airport);
+          } else if (iataMatches || airportNameMatches) {
+            // IATA or airport name matched - show as direct airport
+            directAirportMatches.push(airport);
+          }
+        });
+
+        // Process city matches
+        cityMatches.forEach((airports, kgmid) => {
+          if (!addedCityKgmids.has(kgmid)) {
+            addedCityKgmids.add(kgmid);
+            // Only show city group if:
+            // 1. SerpAPI only is selected AND
+            // 2. City has more than one airport
+            if (onlySerpApi && airports.length > 1) {
+              matchedCities.push({
+                name: airports[0].city,
+                kgmid: kgmid,
+                countryName: country.name,
+                airports: airports,
+              });
+            } else {
+              // Show airports directly (single airport city or non-serpapi providers)
+              matchedAirports.push(...airports);
+            }
+          }
+        });
+
+        // Add direct airport matches
+        matchedAirports.push(...directAirportMatches);
+      }
+    });
+
+    setOriginSuggestions({
+      countries: matchedCountries.slice(0, 5),
+      cities: matchedCities.slice(0, 5),
+      airports: matchedAirports.slice(0, 10)
+    });
+  }, [originInput, formData.providers]);
+
+  // Handle clicking outside to close suggestions
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (originRef.current && !originRef.current.contains(event.target as Node)) {
+        setShowOriginSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Sync originInput with formData.origin when selected from history
+  useEffect(() => {
+    if (formData.origin) {
+      // Find if it's a country kgmid
+      const countryMatch = COUNTRIES.find(c => c.kgmid === formData.origin);
+      if (countryMatch) {
+        if (originInput !== countryMatch.name) {
+          setOriginInput(countryMatch.name);
+        }
+        return;
+      }
+
+      // Find if it's a city kgmid
+      let cityMatch: { city: string; kgmid: string } | undefined;
+      COUNTRIES.some(c => {
+        const airport = c.airports.find(a => a.city_kgmid === formData.origin);
+        if (airport && airport.city_kgmid) {
+          cityMatch = { city: airport.city, kgmid: airport.city_kgmid };
+          return true;
+        }
+        return false;
+      });
+
+      if (cityMatch) {
+        const expectedInput = `${cityMatch.city} (all airports)`;
+        if (originInput !== expectedInput) {
+          setOriginInput(expectedInput);
+        }
+        return;
+      }
+
+      // Find if it's an airport IATA
+      let airportMatch: AirportData | undefined;
+      COUNTRIES.some(c => {
+        airportMatch = c.airports.find(a => a.iata === formData.origin);
+        return !!airportMatch;
+      });
+
+      if (airportMatch) {
+        const expectedInput = `${airportMatch.city} (${airportMatch.iata})`;
+        if (originInput !== expectedInput) {
+          setOriginInput(expectedInput);
+        }
+      } else if (originInput !== formData.origin) {
+        setOriginInput(formData.origin);
+      }
+    }
+  }, [formData.origin]);
+
+  const toggleCountryExpansion = (e: React.MouseEvent, countryName: string) => {
+    e.stopPropagation();
+    setExpandedCountries(prev => {
+      const next = new Set(prev);
+      if (next.has(countryName)) {
+        next.delete(countryName);
+      } else {
+        next.add(countryName);
+      }
+      return next;
+    });
+  };
+
+  const toggleCityExpansion = (e: React.MouseEvent, cityKgmid: string) => {
+    e.stopPropagation();
+    setExpandedCities(prev => {
+      const next = new Set(prev);
+      if (next.has(cityKgmid)) {
+        next.delete(cityKgmid);
+      } else {
+        next.add(cityKgmid);
+      }
+      return next;
+    });
+  };
 
   // Check API health on mount
   useEffect(() => {
@@ -287,6 +496,20 @@ export default function Home() {
     setJobStatus(null);
 
     try {
+      if (!formData.origin) {
+        throw new Error("Please select an origin from the suggestions (start typing a city, country, or airport name).");
+      }
+
+      // Validate that kgmid origins only work with serpapi-only
+      const isOnlySerpApi = formData.providers.length === 1 && formData.providers[0] === 'serpapi';
+      const originIsKgmid = formData.origin.startsWith('/');
+      if (originIsKgmid && !isOnlySerpApi) {
+        throw new Error("City/country search requires SerpAPI only. Please select a specific airport or use only SerpAPI as the provider.");
+      }
+
+      // Debug: log what we're sending
+      console.log('🚀 Submitting search:', { origin: formData.origin, providers: formData.providers });
+
       const response = await startSearch(formData);
       console.log('🔍 Search Job Created - Job ID:', response.job_id);
       console.log('📍 Direct API URL:', `${process.env.NEXT_PUBLIC_API_URL || 'https://holiday-destination-finder.onrender.com'}/jobs/${response.job_id}`);
@@ -422,12 +645,23 @@ export default function Home() {
   };
 
   const handleProviderChange = (provider: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      providers: checked
+    setFormData(prev => {
+      const newProviders = checked
         ? [...prev.providers, provider]
-        : prev.providers.filter(p => p !== provider),
-    }));
+        : prev.providers.filter(p => p !== provider);
+
+      // If adding non-serpapi provider and current origin is a kgmid, clear it
+      const isOnlySerpApi = newProviders.length === 1 && newProviders[0] === 'serpapi';
+      const originIsKgmid = prev.origin.startsWith('/');
+
+      if (!isOnlySerpApi && originIsKgmid) {
+        // Clear kgmid origin - user needs to select an airport
+        setOriginInput('');
+        return { ...prev, providers: newProviders, origin: '' };
+      }
+
+      return { ...prev, providers: newProviders };
+    });
   };
 
   // Set default dates (first and last day of next month)
@@ -489,17 +723,140 @@ export default function Home() {
                 <label htmlFor="origin" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('origin')}
                 </label>
-                <input
-                  type="text"
-                  id="origin"
-                  value={formData.origin}
-                  onChange={(e) => setFormData({ ...formData, origin: e.target.value.toUpperCase() })}
-                  className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-400 autofill:bg-white autofill:text-gray-900"
-                  placeholder="WRO"
-                  maxLength={3}
-                  required
-                  disabled={isSearching}
-                />
+                <div className="relative" ref={originRef}>
+                  <input
+                    type="text"
+                    id="origin"
+                    value={originInput}
+                    onChange={(e) => {
+                      setOriginInput(e.target.value);
+                      setShowOriginSuggestions(true);
+                    }}
+                    onFocus={() => setShowOriginSuggestions(true)}
+                    className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-400 autofill:bg-white autofill:text-gray-900"
+                    placeholder="City, Country, or IATA"
+                    required
+                    disabled={isSearching}
+                    autoComplete="off"
+                  />
+                  {showOriginSuggestions && (originSuggestions.countries.length > 0 || originSuggestions.cities.length > 0 || originSuggestions.airports.length > 0) && (
+                    <ul className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-80 overflow-auto py-1">
+                      {/* Country suggestions */}
+                      {originSuggestions.countries.map((country) => (
+                        <li key={country.kgmid}>
+                          <div
+                            className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center group"
+                            onClick={() => {
+                              setOriginInput(country.name);
+                              setFormData({ ...formData, origin: country.kgmid });
+                              setShowOriginSuggestions(false);
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider border border-gray-200 dark:border-gray-600 px-1 rounded">Country</span>
+                              <span className="font-medium text-gray-900 dark:text-white">{country.name}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => toggleCountryExpansion(e, country.name)}
+                              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold"
+                            >
+                              {expandedCountries.has(country.name) ? 'Collapse' : `Show ${country.airports.length} airports`}
+                            </button>
+                          </div>
+                          {expandedCountries.has(country.name) && (
+                            <ul className="bg-gray-50 dark:bg-gray-800/50 border-t border-b border-gray-100 dark:border-gray-700/50">
+                              {country.airports.map(airport => (
+                                <li
+                                  key={airport.iata}
+                                  className="pl-8 pr-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center"
+                                  onClick={() => {
+                                    setOriginInput(`${airport.city} (${airport.iata})`);
+                                    setFormData({ ...formData, origin: airport.iata });
+                                    setShowOriginSuggestions(false);
+                                  }}
+                                >
+                                  <div>
+                                    <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{airport.city}</div>
+                                    <div className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">{airport.name}</div>
+                                  </div>
+                                  <div className="text-xs font-bold text-indigo-500">{airport.iata}</div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </li>
+                      ))}
+                      {/* City suggestions */}
+                      {originSuggestions.cities.map((city) => (
+                        <li key={city.kgmid}>
+                          <div
+                            className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center group"
+                            onClick={() => {
+                              setOriginInput(`${city.name} (all airports)`);
+                              setFormData({ ...formData, origin: city.kgmid });
+                              setShowOriginSuggestions(false);
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider border border-blue-300 dark:border-blue-600 px-1 rounded">City</span>
+                              <div>
+                                <span className="font-medium text-gray-900 dark:text-white">{city.name}</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({city.countryName})</span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => toggleCityExpansion(e, city.kgmid)}
+                              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold"
+                            >
+                              {expandedCities.has(city.kgmid) ? 'Collapse' : `Show ${city.airports.length} airports`}
+                            </button>
+                          </div>
+                          {expandedCities.has(city.kgmid) && (
+                            <ul className="bg-gray-50 dark:bg-gray-800/50 border-t border-b border-gray-100 dark:border-gray-700/50">
+                              {city.airports.map(airport => (
+                                <li
+                                  key={airport.iata}
+                                  className="pl-8 pr-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center"
+                                  onClick={() => {
+                                    setOriginInput(`${airport.city} (${airport.iata})`);
+                                    setFormData({ ...formData, origin: airport.iata });
+                                    setShowOriginSuggestions(false);
+                                  }}
+                                >
+                                  <div>
+                                    <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{airport.city}</div>
+                                    <div className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">{airport.name}</div>
+                                  </div>
+                                  <div className="text-xs font-bold text-indigo-500">{airport.iata}</div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </li>
+                      ))}
+                      {/* Direct airport suggestions */}
+                      {originSuggestions.airports.map((airport) => (
+                        <li
+                          key={airport.iata}
+                          className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center"
+                          onClick={() => {
+                            setOriginInput(`${airport.city} (${airport.iata})`);
+                            setFormData({ ...formData, origin: airport.iata });
+                            setShowOriginSuggestions(false);
+                          }}
+                        >
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-white">{airport.city}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{airport.name}</div>
+                          </div>
+                          <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 ml-2">{airport.iata}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
 
               <div>
