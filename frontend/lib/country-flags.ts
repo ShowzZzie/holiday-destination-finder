@@ -25,6 +25,7 @@ const countryNameToCode: Record<string, string> = {
   'Romania': 'RO',
   'Bulgaria': 'BG',
   'Turkey': 'TR',
+  'Türkiye': 'TR',
   'Egypt': 'EG',
   'Morocco': 'MA',
   'Tunisia': 'TN',

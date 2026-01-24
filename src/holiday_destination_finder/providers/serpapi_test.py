@@ -103,6 +103,10 @@ def _fetch_destinations_for_month(origin: str, month: int, travel_duration: int,
             sample = destinations[0]
             logger.info(f"[serpapi] Sample destination month={month}: name={sample.get('name')} airport={sample.get('destination_airport', {}).get('code')} "
                        f"start={sample.get('start_date')} end={sample.get('end_date')} price={sample.get('flight_price')}")
+            # Log all keys to see if departure airport info is available
+            logger.debug(f"[serpapi] Sample destination keys: {list(sample.keys())}")
+            if 'departure_airport' in sample or 'origin_airport' in sample:
+                logger.info(f"[serpapi] Departure airport info found: dep={sample.get('departure_airport')} origin={sample.get('origin_airport')}")
         return destinations, meta
     except Exception as e:
         logger.error(f"[serpapi] API error for month {month}: {e}", exc_info=True)
@@ -228,12 +232,17 @@ def discover_destinations(
                     continue
                 seen_keys.add(key)
 
+                # Get departure airport info (available when searching by kgmid)
+                dep_airport_info = dest.get("departure_airport", {})
+                dep_airport = dep_airport_info.get("code") or dep_airport_info.get("id") or ""
+
                 entry = {
                     "city": dest.get("name", "Unknown"),
                     "country": dest.get("country", "Unknown"),
                     "lat": float(lat),
                     "lon": float(lon),
                     "airport": airport,
+                    "departure_airport": dep_airport,
                     "price": round(price, 2),
                     "currency": "EUR",
                     "stops": int(dest.get("number_of_stops", 0)),

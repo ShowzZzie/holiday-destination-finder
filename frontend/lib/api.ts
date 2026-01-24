@@ -25,6 +25,7 @@ export interface SearchResult {
   city: string;
   country: string;
   airport: string;
+  departure_airport?: string;
   avg_temp_c: number;
   avg_precip_mm_per_day: number;
   flight_price: number;

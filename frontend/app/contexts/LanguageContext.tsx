@@ -70,6 +70,9 @@ const translations: Record<Language, Record<string, string>> = {
     'scoreExplanation': 'Combines price (40%) and weather (60%). Higher = better value.',
     // Daily averages note
     'dailyAverages': 'Weather values are daily averages for your trip dates',
+    // Departure info
+    'departingFrom': 'Departing from',
+    'anyAirport': 'any airport',
   },
   pl: {
     'title': 'Wyszukiwarka Destynacji Wakacyjnych',
@@ -127,6 +130,9 @@ const translations: Record<Language, Record<string, string>> = {
     'scoreExplanation': 'Łączy cenę (40%) i pogodę (60%). Wyższy = lepsza oferta.',
     // Daily averages note
     'dailyAverages': 'Wartości pogodowe to średnie dzienne dla Twojego wyjazdu',
+    // Departure info
+    'departingFrom': 'Wylot z',
+    'anyAirport': 'dowolne lotnisko',
   },
   es: {
     'title': 'Buscador de Destinos Vacacionales',
@@ -184,6 +190,9 @@ const translations: Record<Language, Record<string, string>> = {
     'scoreExplanation': 'Combina precio (40%) y clima (60%). Mayor = mejor valor.',
     // Daily averages note
     'dailyAverages': 'Los valores climáticos son promedios diarios para tus fechas de viaje',
+    // Departure info
+    'departingFrom': 'Saliendo desde',
+    'anyAirport': 'cualquier aeropuerto',
   },
   pt: {
     'title': 'Localizador de Destinos de Férias',
@@ -241,6 +250,9 @@ const translations: Record<Language, Record<string, string>> = {
     'scoreExplanation': 'Combina preço (40%) e clima (60%). Maior = melhor valor.',
     // Daily averages note
     'dailyAverages': 'Os valores climáticos são médias diárias para as datas da sua viagem',
+    // Departure info
+    'departingFrom': 'Partindo de',
+    'anyAirport': 'qualquer aeroporto',
   },
   de: {
     'title': 'Urlaubsziel-Finder',
@@ -298,6 +310,9 @@ const translations: Record<Language, Record<string, string>> = {
     'scoreExplanation': 'Kombiniert Preis (40%) und Wetter (60%). Höher = besserer Wert.',
     // Daily averages note
     'dailyAverages': 'Wetterwerte sind Tagesdurchschnitte für deine Reisedaten',
+    // Departure info
+    'departingFrom': 'Abflug von',
+    'anyAirport': 'beliebiger Flughafen',
   },
   fr: {
     'title': 'Recherche de Destinations de Vacances',
@@ -355,6 +370,9 @@ const translations: Record<Language, Record<string, string>> = {
     'scoreExplanation': 'Combine prix (40%) et météo (60%). Plus élevé = meilleure valeur.',
     // Daily averages note
     'dailyAverages': 'Les valeurs météo sont des moyennes journalières pour vos dates de voyage',
+    // Departure info
+    'departingFrom': 'Départ de',
+    'anyAirport': 'n\'importe quel aéroport',
   },
 };
 

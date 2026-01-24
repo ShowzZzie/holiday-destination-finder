@@ -12,6 +12,30 @@ interface CityGroup {
   countryName: string;
   airports: AirportData[];
 }
+
+// Helper to convert origin (IATA or kgmid) to readable display name
+function getOriginDisplayName(origin: string): string {
+  if (!origin) return 'Unknown';
+
+  // Check if it's a country kgmid
+  const countryMatch = COUNTRIES.find(c => c.kgmid === origin);
+  if (countryMatch) return countryMatch.name;
+
+  // Check if it's a city kgmid
+  for (const country of COUNTRIES) {
+    const airport = country.airports.find(a => a.city_kgmid === origin);
+    if (airport) return `${airport.city} (${country.name})`;
+  }
+
+  // Check if it's an airport IATA
+  for (const country of COUNTRIES) {
+    const airport = country.airports.find(a => a.iata === origin);
+    if (airport) return `${airport.city} (${airport.iata})`;
+  }
+
+  // Fallback - return as-is
+  return origin;
+}
 import { getCountryCode, getFlagUrl, getRegion, ALL_REGIONS, Region } from '@/lib/country-flags';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { useCurrency } from '@/app/contexts/CurrencyContext';
@@ -1236,7 +1260,7 @@ function JobHistorySidebar({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                         <div className="text-sm font-medium truncate">
-                          {job.origin} · {formatDate(job.start)} · {formatDate(job.end)}
+                          {getOriginDisplayName(job.origin)} · {formatDate(job.start)} · {formatDate(job.end)}
                         </div>
                       </div>
                       <div className="text-xs font-mono text-gray-500 dark:text-gray-400 truncate">{job.jobId}</div>
@@ -1848,7 +1872,7 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
                   {result.city}
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {result.country} · {result.airport}
+                  {result.country} · {result.departure_airport ? `${result.departure_airport} → ${result.airport}` : result.airport}
                 </p>
               </div>
             </div>
@@ -1918,7 +1942,7 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
                 {result.city}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {result.country} · {result.airport}
+                {result.country} · {result.departure_airport ? `${result.departure_airport} → ${result.airport}` : result.airport}
               </p>
               {/* Flight dates inline on desktop */}
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">

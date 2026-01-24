@@ -369,6 +369,7 @@ def _process_single_destination(
             "city": city,
             "country": country,
             "airport": airport,
+            "departure_airport": origin,  # For non-SerpAPI, origin is always IATA
             "avg_temp_c": best_weather["avg_temp_c"],
             "avg_precip_mm_per_day": best_weather["avg_precip_mm_per_day"],
             "flight_price": float(flight_price),
@@ -379,7 +380,7 @@ def _process_single_destination(
             "best_return": _to_iso(best_ret),
             "weather_data": best_weather,
         }
-    
+
     return None
 
 
@@ -480,6 +481,7 @@ def _search_with_serpapi(
                 "city": city,
                 "country": country,
                 "airport": airport,
+                "departure_airport": best_flight.get("departure_airport", ""),
                 "avg_temp_c": best_weather["avg_temp_c"],
                 "avg_precip_mm_per_day": best_weather["avg_precip_mm_per_day"],
                 "flight_price": best_flight["price"],
