@@ -188,7 +188,7 @@ export default function Home() {
   const [topNInput, setTopNInput] = useState<string>('5');
 
   // Origin autocomplete state
-  const [originInput, setOriginInput] = useState<string>('Wrocław (WRO)');
+  const [originInput, setOriginInput] = useState<string>('');
   const [originSuggestions, setOriginSuggestions] = useState<{
     countries: Country[];
     cities: CityGroup[];
@@ -197,7 +197,77 @@ export default function Home() {
   const [expandedCountries, setExpandedCountries] = useState<Set<string>>(new Set());
   const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set());
   const [showOriginSuggestions, setShowOriginSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState<number>(-1);
   const originRef = useRef<HTMLDivElement>(null);
+  const suggestionListRef = useRef<HTMLUListElement>(null);
+
+  const selectSuggestion = (suggestion: { type: string; data: any }) => {
+    if (suggestion.type === 'country') {
+      const country = suggestion.data as Country;
+      setOriginInput(country.name);
+      setFormData(prev => ({ ...prev, origin: country.kgmid }));
+    } else if (suggestion.type === 'city') {
+      const city = suggestion.data as CityGroup;
+      setOriginInput(`${city.name} (all airports)`);
+      setFormData(prev => ({ ...prev, origin: city.kgmid }));
+    } else if (suggestion.type === 'airport') {
+      const airport = suggestion.data as AirportData;
+      setOriginInput(`${airport.city} (${airport.iata})`);
+      setFormData(prev => ({ ...prev, origin: airport.iata }));
+    }
+    setShowOriginSuggestions(false);
+    setSelectedSuggestionIndex(-1);
+  };
+
+  // Flatten suggestions for keyboard navigation
+  const flatSuggestions = useMemo(() => {
+    const flat: Array<{
+      type: 'country' | 'city' | 'airport';
+      data: Country | CityGroup | AirportData;
+      parentId?: string;
+    }> = [];
+
+    originSuggestions.countries.forEach(country => {
+      flat.push({ type: 'country', data: country });
+      if (expandedCountries.has(country.name)) {
+        country.airports.forEach(airport => {
+          flat.push({ type: 'airport', data: airport, parentId: country.name });
+        });
+      }
+    });
+
+    originSuggestions.cities.forEach(city => {
+      flat.push({ type: 'city', data: city });
+      if (expandedCities.has(city.kgmid)) {
+        city.airports.forEach(airport => {
+          flat.push({ type: 'airport', data: airport, parentId: city.kgmid });
+        });
+      }
+    });
+
+    originSuggestions.airports.forEach(airport => {
+      flat.push({ type: 'airport', data: airport });
+    });
+
+    return flat;
+  }, [originSuggestions, expandedCountries, expandedCities]);
+
+  // Reset selected index when suggestions change
+  useEffect(() => {
+    setSelectedSuggestionIndex(-1);
+  }, [flatSuggestions]);
+
+  // Scroll selected suggestion into view
+  useEffect(() => {
+    if (selectedSuggestionIndex >= 0 && suggestionListRef.current) {
+      const selectedElement = suggestionListRef.current.children[selectedSuggestionIndex] as HTMLElement;
+      if (selectedElement) {
+        selectedElement.scrollIntoView({
+          block: 'nearest',
+        });
+      }
+    }
+  }, [selectedSuggestionIndex]);
 
   // Filter based on input
   useEffect(() => {
@@ -799,6 +869,28 @@ export default function Home() {
                       setShowOriginSuggestions(true);
                     }}
                     onFocus={() => setShowOriginSuggestions(true)}
+                    onKeyDown={(e) => {
+                      if (!showOriginSuggestions || flatSuggestions.length === 0) return;
+
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        setSelectedSuggestionIndex(prev => 
+                          prev < flatSuggestions.length - 1 ? prev + 1 : 0
+                        );
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        setSelectedSuggestionIndex(prev => 
+                          prev > 0 ? prev - 1 : flatSuggestions.length - 1
+                        );
+                      } else if (e.key === 'Enter') {
+                        if (selectedSuggestionIndex >= 0) {
+                          e.preventDefault();
+                          selectSuggestion(flatSuggestions[selectedSuggestionIndex]);
+                        }
+                      } else if (e.key === 'Escape') {
+                        setShowOriginSuggestions(false);
+                      }
+                    }}
                     className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-400 autofill:bg-white autofill:text-gray-900"
                     placeholder="City, Country, or IATA"
                     required
@@ -806,120 +898,128 @@ export default function Home() {
                     autoComplete="off"
                   />
                   {showOriginSuggestions && (originSuggestions.countries.length > 0 || originSuggestions.cities.length > 0 || originSuggestions.airports.length > 0) && (
-                    <ul className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-80 overflow-auto py-1">
+                    <ul 
+                      ref={suggestionListRef}
+                      className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-80 overflow-auto py-1"
+                    >
                       {/* Country suggestions */}
-                      {originSuggestions.countries.map((country) => (
-                        <li key={country.kgmid}>
-                          <div
-                            className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center group"
-                            onClick={() => {
-                              setOriginInput(country.name);
-                              setFormData({ ...formData, origin: country.kgmid });
-                              setShowOriginSuggestions(false);
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider border border-gray-200 dark:border-gray-600 px-1 rounded">Country</span>
-                              <span className="font-medium text-gray-900 dark:text-white">{country.name}</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => toggleCountryExpansion(e, country.name)}
-                              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold"
+                      {originSuggestions.countries.map((country) => {
+                        const countryIndex = flatSuggestions.findIndex(f => f.type === 'country' && (f.data as Country).kgmid === country.kgmid);
+                        const isSelected = selectedSuggestionIndex === countryIndex;
+                        
+                        return (
+                          <li key={country.kgmid}>
+                            <div
+                              className={`px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center group ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}
+                              onClick={() => selectSuggestion({ type: 'country', data: country })}
                             >
-                              {expandedCountries.has(country.name) ? 'Collapse' : `Show ${country.airports.length} airports`}
-                            </button>
-                          </div>
-                          {expandedCountries.has(country.name) && (
-                            <ul className="bg-gray-50 dark:bg-gray-800/50 border-t border-b border-gray-100 dark:border-gray-700/50">
-                              {country.airports.map(airport => (
-                                <li
-                                  key={airport.iata}
-                                  className="pl-8 pr-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center"
-                                  onClick={() => {
-                                    setOriginInput(`${airport.city} (${airport.iata})`);
-                                    setFormData({ ...formData, origin: airport.iata });
-                                    setShowOriginSuggestions(false);
-                                  }}
-                                >
-                                  <div>
-                                    <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{airport.city}</div>
-                                    <div className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">{airport.name}</div>
-                                  </div>
-                                  <div className="text-xs font-bold text-indigo-500">{airport.iata}</div>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </li>
-                      ))}
-                      {/* City suggestions */}
-                      {originSuggestions.cities.map((city) => (
-                        <li key={city.kgmid}>
-                          <div
-                            className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center group"
-                            onClick={() => {
-                              setOriginInput(`${city.name} (all airports)`);
-                              setFormData({ ...formData, origin: city.kgmid });
-                              setShowOriginSuggestions(false);
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider border border-blue-300 dark:border-blue-600 px-1 rounded">City</span>
-                              <div>
-                                <span className="font-medium text-gray-900 dark:text-white">{city.name}</span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({city.countryName})</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider border border-gray-200 dark:border-gray-600 px-1 rounded">Country</span>
+                                <span className="font-medium text-gray-900 dark:text-white">{country.name}</span>
                               </div>
+                              <button
+                                type="button"
+                                onClick={(e) => toggleCountryExpansion(e, country.name)}
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold"
+                              >
+                                {expandedCountries.has(country.name) ? 'Collapse' : `Show ${country.airports.length} airports`}
+                              </button>
                             </div>
-                            <button
-                              type="button"
-                              onClick={(e) => toggleCityExpansion(e, city.kgmid)}
-                              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold"
+                            {expandedCountries.has(country.name) && (
+                              <ul className="bg-gray-50 dark:bg-gray-800/50 border-t border-b border-gray-100 dark:border-gray-700/50">
+                                {country.airports.map(airport => {
+                                  const airportIndex = flatSuggestions.findIndex(f => f.type === 'airport' && (f.data as AirportData).iata === airport.iata && f.parentId === country.name);
+                                  const isAirportSelected = selectedSuggestionIndex === airportIndex;
+                                  
+                                  return (
+                                    <li
+                                      key={airport.iata}
+                                      className={`pl-8 pr-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center ${isAirportSelected ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}
+                                      onClick={() => selectSuggestion({ type: 'airport', data: airport })}
+                                    >
+                                      <div>
+                                        <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{airport.city}</div>
+                                        <div className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">{airport.name}</div>
+                                      </div>
+                                      <div className="text-xs font-bold text-indigo-500">{airport.iata}</div>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            )}
+                          </li>
+                        );
+                      })}
+                      {/* City suggestions */}
+                      {originSuggestions.cities.map((city) => {
+                        const cityIndex = flatSuggestions.findIndex(f => f.type === 'city' && (f.data as CityGroup).kgmid === city.kgmid);
+                        const isSelected = selectedSuggestionIndex === cityIndex;
+                        
+                        return (
+                          <li key={city.kgmid}>
+                            <div
+                              className={`px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center group ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}
+                              onClick={() => selectSuggestion({ type: 'city', data: city })}
                             >
-                              {expandedCities.has(city.kgmid) ? 'Collapse' : `Show ${city.airports.length} airports`}
-                            </button>
-                          </div>
-                          {expandedCities.has(city.kgmid) && (
-                            <ul className="bg-gray-50 dark:bg-gray-800/50 border-t border-b border-gray-100 dark:border-gray-700/50">
-                              {city.airports.map(airport => (
-                                <li
-                                  key={airport.iata}
-                                  className="pl-8 pr-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center"
-                                  onClick={() => {
-                                    setOriginInput(`${airport.city} (${airport.iata})`);
-                                    setFormData({ ...formData, origin: airport.iata });
-                                    setShowOriginSuggestions(false);
-                                  }}
-                                >
-                                  <div>
-                                    <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{airport.city}</div>
-                                    <div className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">{airport.name}</div>
-                                  </div>
-                                  <div className="text-xs font-bold text-indigo-500">{airport.iata}</div>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </li>
-                      ))}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider border border-blue-300 dark:border-blue-600 px-1 rounded">City</span>
+                                <div>
+                                  <span className="font-medium text-gray-900 dark:text-white">{city.name}</span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({city.countryName})</span>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => toggleCityExpansion(e, city.kgmid)}
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold"
+                              >
+                                {expandedCities.has(city.kgmid) ? 'Collapse' : `Show ${city.airports.length} airports`}
+                              </button>
+                            </div>
+                            {expandedCities.has(city.kgmid) && (
+                              <ul className="bg-gray-50 dark:bg-gray-800/50 border-t border-b border-gray-100 dark:border-gray-700/50">
+                                {city.airports.map(airport => {
+                                  const airportIndex = flatSuggestions.findIndex(f => f.type === 'airport' && (f.data as AirportData).iata === airport.iata && f.parentId === city.kgmid);
+                                  const isAirportSelected = selectedSuggestionIndex === airportIndex;
+                                  
+                                  return (
+                                    <li
+                                      key={airport.iata}
+                                      className={`pl-8 pr-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center ${isAirportSelected ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}
+                                      onClick={() => selectSuggestion({ type: 'airport', data: airport })}
+                                    >
+                                      <div>
+                                        <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{airport.city}</div>
+                                        <div className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">{airport.name}</div>
+                                      </div>
+                                      <div className="text-xs font-bold text-indigo-500">{airport.iata}</div>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            )}
+                          </li>
+                        );
+                      })}
                       {/* Direct airport suggestions */}
-                      {originSuggestions.airports.map((airport) => (
-                        <li
-                          key={airport.iata}
-                          className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center"
-                          onClick={() => {
-                            setOriginInput(`${airport.city} (${airport.iata})`);
-                            setFormData({ ...formData, origin: airport.iata });
-                            setShowOriginSuggestions(false);
-                          }}
-                        >
-                          <div>
-                            <div className="font-medium text-gray-900 dark:text-white">{airport.city}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">{airport.name}</div>
-                          </div>
-                          <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 ml-2">{airport.iata}</div>
-                        </li>
-                      ))}
+                      {originSuggestions.airports.map((airport) => {
+                        const airportIndex = flatSuggestions.findIndex(f => f.type === 'airport' && (f.data as AirportData).iata === airport.iata && !f.parentId);
+                        const isSelected = selectedSuggestionIndex === airportIndex;
+                        
+                        return (
+                          <li
+                            key={airport.iata}
+                            className={`px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}
+                            onClick={() => selectSuggestion({ type: 'airport', data: airport })}
+                          >
+                            <div>
+                              <div className="font-medium text-gray-900 dark:text-white">{airport.city}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">{airport.name}</div>
+                            </div>
+                            <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 ml-2">{airport.iata}</div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>
