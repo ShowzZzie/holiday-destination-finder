@@ -53,7 +53,7 @@ def _trip_length_to_duration(days: int) -> int:
 
 
 def _months_in_range(from_date: str, to_date: str) -> list[int]:
-    """Get all months (1-12) covered by the date range."""
+    """Get all months (1-12) covered by the date range. Note: SerpAPI month is 1-12 only, no year."""
     start = datetime.strptime(from_date, "%Y-%m-%d")
     end = datetime.strptime(to_date, "%Y-%m-%d")
 
@@ -70,8 +70,8 @@ def _months_in_range(from_date: str, to_date: str) -> list[int]:
     return sorted(months)
 
 
-def _fetch_destinations_for_month(origin: str, month: int, travel_duration: int, api_key: str) -> list[dict]:
-    """Fetch destinations for a single month."""
+def _fetch_destinations_for_month(origin: str, month: int, travel_duration: int, api_key: str) -> tuple[list[dict], dict]:
+    """Fetch destinations for a single month. Returns (destinations, raw_meta) for logging."""
     params = {
         "engine": "google_travel_explore",
         "departure_id": origin,
@@ -84,16 +84,30 @@ def _fetch_destinations_for_month(origin: str, month: int, travel_duration: int,
     }
 
     _CALLS["searches"] += 1
-    logger.debug(f"[serpapi] Fetching month={month}, duration={travel_duration}")
+    logger.info(f"[serpapi] Request month={month} (1=Jan..12=Dec) | travel_duration={travel_duration} | params={dict((k, v) for k, v in params.items() if k != 'api_key')}")
 
     try:
         search = GoogleSearch(params)
         results = search.get_dict()
-        return results.get("destinations", [])
+        destinations = results.get("destinations", [])
+        meta = {
+            "status": results.get("search_metadata", {}).get("status"),
+            "error": results.get("error"),
+            "top_keys": list(results.keys()),
+        }
+        logger.info(f"[serpapi] Response month={month}: status={meta['status']} | error={meta['error']} | "
+                   f"destinations={len(destinations)} | response_keys={meta['top_keys']}")
+        if not destinations and meta["error"]:
+            logger.warning(f"[serpapi] API returned error for month {month}: {meta['error']}")
+        if destinations:
+            sample = destinations[0]
+            logger.info(f"[serpapi] Sample destination month={month}: name={sample.get('name')} airport={sample.get('destination_airport', {}).get('code')} "
+                       f"start={sample.get('start_date')} end={sample.get('end_date')} price={sample.get('flight_price')}")
+        return destinations, meta
     except Exception as e:
-        logger.error(f"[serpapi] API error for month {month}: {e}")
+        logger.error(f"[serpapi] API error for month {month}: {e}", exc_info=True)
         _ERRORS["api_errors"] += 1
-        return []
+        return [], {"status": None, "error": str(e), "top_keys": []}
 
 
 def discover_destinations(
@@ -139,59 +153,76 @@ def discover_destinations(
     travel_duration = _trip_length_to_duration(trip_length)
     months = _months_in_range(from_date, to_date)
 
-    logger.info(f"[serpapi] Discovering from {origin} | dates: {from_date} to {to_date} | "
-                f"trip: {trip_length}d | months: {months}")
-
-    # Parse date boundaries for filtering
     from_dt = datetime.strptime(from_date, "%Y-%m-%d").date()
     to_dt = datetime.strptime(to_date, "%Y-%m-%d").date()
+    today = datetime.utcnow().date()
+    months_ahead = (from_dt - today).days // 30 if from_dt > today else 0
+
+    logger.info(
+        f"[serpapi] Discovering from {origin} | dates: {from_date} to {to_date} | "
+        f"trip: {trip_length}d | travel_duration={travel_duration} | months={months}"
+    )
+    logger.info(
+        f"[serpapi] Date context: today={today} | from_dt={from_dt} to_dt={to_dt} | "
+        f"~{months_ahead} months from today. SerpAPI only supports 'next 6 months' for month param."
+    )
+    if months_ahead > 6:
+        logger.warning(
+            f"[serpapi] Requested range is >6 months from today. SerpAPI may return no results for those months."
+        )
 
     # Fetch all months, keep all flights (not just cheapest per airport)
     # Deduplicate by (airport, dep_date, ret_date) to avoid exact duplicates from overlapping months
     seen_keys = set()
     results = []
+    skip_counts = {"no_airport": 0, "no_coords": 0, "no_price": 0, "no_dates": 0, "date_filter": 0, "dedupe": 0, "malformed": 0}
+
+    date_filter_samples: list[tuple[str, str, str]] = []  # (month, dep_date, ret_date) for first few drops
 
     for month in months:
-        raw_destinations = _fetch_destinations_for_month(origin, month, travel_duration, api_key)
+        raw_destinations, _ = _fetch_destinations_for_month(origin, month, travel_duration, api_key)
+        kept_this_month = 0
+        skipped_date_filter_this_month = 0
 
         for dest in raw_destinations:
             try:
-                # Extract airport code
                 dest_airport_info = dest.get("destination_airport", {})
                 airport = dest_airport_info.get("code")
                 if not airport:
+                    skip_counts["no_airport"] += 1
                     continue
 
-                # Extract coordinates
                 coords = dest.get("gps_coordinates", {})
                 lat = coords.get("latitude")
                 lon = coords.get("longitude")
                 if lat is None or lon is None:
+                    skip_counts["no_coords"] += 1
                     continue
 
-                # Extract price
                 price = dest.get("flight_price")
                 if price is None:
+                    skip_counts["no_price"] += 1
                     continue
                 price = float(price)
 
-                # Extract dates - skip flights without specific dates
                 dep_date = dest.get("start_date")
                 ret_date = dest.get("end_date")
-
                 if not dep_date or not ret_date:
-                    # Skip flights without specific dates - can't fetch accurate weather
+                    skip_counts["no_dates"] += 1
                     continue
 
-                # Filter by date range
                 dep_dt = datetime.strptime(dep_date, "%Y-%m-%d").date()
                 ret_dt = datetime.strptime(ret_date, "%Y-%m-%d").date()
                 if dep_dt < from_dt or ret_dt > to_dt:
+                    skip_counts["date_filter"] += 1
+                    skipped_date_filter_this_month += 1
+                    if len(date_filter_samples) < 5:
+                        date_filter_samples.append((str(month), dep_date, ret_date))
                     continue
 
-                # Deduplicate exact same flight (airport + dates)
                 key = (airport, dep_date, ret_date)
                 if key in seen_keys:
+                    skip_counts["dedupe"] += 1
                     continue
                 seen_keys.add(key)
 
@@ -208,16 +239,33 @@ def discover_destinations(
                     "dep_date": dep_date,
                     "ret_date": ret_date,
                 }
-
                 results.append(entry)
+                kept_this_month += 1
 
             except (ValueError, TypeError, KeyError) as e:
-                logger.debug(f"[serpapi] Skipping malformed destination: {e}")
+                skip_counts["malformed"] += 1
+                logger.debug(f"[serpapi] Skipping malformed destination: {e} | dest={dest.get('name'), dest.get('destination_airport')}")
                 continue
+
+        logger.info(
+            f"[serpapi] Month {month}: raw={len(raw_destinations)} | kept={kept_this_month} | "
+            f"skipped_date_filter={skipped_date_filter_this_month}"
+        )
 
     results.sort(key=lambda x: x["price"])
 
-    logger.info(f"[serpapi] Found {len(results)} flight options from {origin}")
+    logger.info(
+        f"[serpapi] Totals: {len(results)} flight options from {origin} | skips: {skip_counts}"
+    )
+    if skip_counts["date_filter"] > 0:
+        logger.warning(
+            f"[serpapi] {skip_counts['date_filter']} results dropped by date filter (dep < {from_date} or ret > {to_date}). "
+            "API may return dates outside your range (e.g. different year) since month has no year."
+        )
+        if date_filter_samples:
+            logger.info(
+                f"[serpapi] Sample date-filtered (month, dep, ret): {date_filter_samples}"
+            )
     return results
 
 
@@ -247,9 +295,9 @@ if __name__ == "__main__":
 
     results = discover_destinations(
         origin="WRO",
-        from_date="2026-06-01",
-        to_date="2026-07-31",
-        trip_length=7,
+        from_date="2026-07-01",
+        to_date="2026-08-31",
+        trip_length=10,
     )
 
     logger.info(f"\n=== Found {len(results)} destinations ===")
