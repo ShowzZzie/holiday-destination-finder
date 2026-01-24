@@ -920,7 +920,7 @@ export default function Home() {
                               <button
                                 type="button"
                                 onClick={(e) => toggleCountryExpansion(e, country.name)}
-                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold"
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold cursor-pointer"
                               >
                                 {expandedCountries.has(country.name) ? 'Collapse' : `Show ${country.airports.length} airports`}
                               </button>
@@ -971,7 +971,7 @@ export default function Home() {
                               <button
                                 type="button"
                                 onClick={(e) => toggleCityExpansion(e, city.kgmid)}
-                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold"
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold cursor-pointer"
                               >
                                 {expandedCities.has(city.kgmid) ? 'Collapse' : `Show ${city.airports.length} airports`}
                               </button>
@@ -1129,7 +1129,7 @@ export default function Home() {
                       type="checkbox"
                       checked={formData.providers.includes(provider)}
                       onChange={(e) => handleProviderChange(provider, e.target.checked)}
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
                       disabled={isSearching}
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">
@@ -1149,7 +1149,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={isSearching || formData.providers.length === 0}
-              className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+              className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer text-white font-semibold rounded-lg transition-colors"
             >
               {isSearching ? t('searching') : t('searchDestinations')}
             </button>
@@ -1203,7 +1203,7 @@ function JobStatusDisplay({ jobStatus, onCancel }: { jobStatus: JobStatus; onCan
         {onCancel && (jobStatus.status === 'queued' || jobStatus.status === 'running') && (
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -1327,7 +1327,7 @@ function JobHistorySidebar({
       {/* Sidebar Toggle Button - moves with sidebar */}
       <button
         onClick={onToggle}
-        className={`fixed top-24 z-40 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 ${
+        className={`fixed top-24 z-40 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 cursor-pointer ${
           open ? 'left-[21rem]' : 'left-4'
         }`}
         aria-label="Toggle job history"
@@ -1345,7 +1345,7 @@ function JobHistorySidebar({
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('jobHistory')}</h3>
           <button
             onClick={onToggle}
-            className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer"
             aria-label="Close sidebar"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1360,7 +1360,7 @@ function JobHistorySidebar({
               onNewSearch();
               onToggle();
             }}
-            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1391,7 +1391,7 @@ function JobHistorySidebar({
                   >
                     <button
                       onClick={() => onJobSelect(job.jobId)}
-                      className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                      className={`w-full text-left p-3 rounded-lg border transition-colors cursor-pointer ${
                         selectedJobId === job.jobId
                           ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200'
                           : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -1663,7 +1663,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
               <button
                 key={field}
                 onClick={() => handleSortChange(field)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                   sortField === field
                     ? 'bg-indigo-600 text-white shadow-sm'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -1689,7 +1689,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
           {/* Filter Toggle Button */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`ml-auto px-3 py-1.5 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`ml-auto px-3 py-1.5 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
               showFilters || hasActiveFilters
                 ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -1724,7 +1724,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
                           type="checkbox"
                           checked={filters.regions.includes(region)}
                           onChange={() => toggleRegion(region)}
-                          className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                          className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
                         />
                         <span className="text-sm text-gray-700 dark:text-gray-300">{t(region)}</span>
                       </label>
@@ -1745,7 +1745,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
                         type="checkbox"
                         checked={filters.countries.includes(country)}
                         onChange={() => toggleCountry(country)}
-                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">{country}</span>
                     </label>
@@ -1797,7 +1797,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
                     type="checkbox"
                     checked={filters.directOnly}
                     onChange={(e) => setFilters(prev => ({ ...prev, directOnly: e.target.checked }))}
-                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">{t('directFlightsOnly')}</span>
                 </label>
@@ -1809,7 +1809,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <button
                   onClick={clearFilters}
-                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium"
+                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium cursor-pointer"
                 >
                   {t('clearFilters')}
                 </button>
@@ -1827,7 +1827,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
                 className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 text-sm rounded-full"
               >
                 {t(region)}
-                <button onClick={() => toggleRegion(region)} className="hover:text-indigo-600">
+                <button onClick={() => toggleRegion(region)} className="hover:text-indigo-600 cursor-pointer">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -1840,7 +1840,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
                 className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 text-sm rounded-full"
               >
                 {country}
-                <button onClick={() => toggleCountry(country)} className="hover:text-indigo-600">
+                <button onClick={() => toggleCountry(country)} className="hover:text-indigo-600 cursor-pointer">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -1850,7 +1850,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
             {filters.maxPrice !== null && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 text-sm rounded-full">
                 ≤ {formatPrice(filters.maxPrice)}
-                <button onClick={() => setFilters(prev => ({ ...prev, maxPrice: null }))} className="hover:text-indigo-600">
+                <button onClick={() => setFilters(prev => ({ ...prev, maxPrice: null }))} className="hover:text-indigo-600 cursor-pointer">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -1860,7 +1860,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
             {filters.minTemp !== null && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 text-sm rounded-full">
                 ≥ {filters.minTemp}°C
-                <button onClick={() => setFilters(prev => ({ ...prev, minTemp: null }))} className="hover:text-indigo-600">
+                <button onClick={() => setFilters(prev => ({ ...prev, minTemp: null }))} className="hover:text-indigo-600 cursor-pointer">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -1870,7 +1870,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
             {filters.directOnly && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 text-sm rounded-full">
                 {t('direct')}
-                <button onClick={() => setFilters(prev => ({ ...prev, directOnly: false }))} className="hover:text-indigo-600">
+                <button onClick={() => setFilters(prev => ({ ...prev, directOnly: false }))} className="hover:text-indigo-600 cursor-pointer">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -1879,7 +1879,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
             )}
             <button
               onClick={clearFilters}
-              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer"
             >
               {t('clearFilters')}
             </button>
@@ -1896,7 +1896,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
           <p className="text-gray-500 dark:text-gray-400">{t('noResults')}</p>
           <button
             onClick={clearFilters}
-            className="mt-4 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium"
+            className="mt-4 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium cursor-pointer"
           >
             {t('clearFilters')}
           </button>

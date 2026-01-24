@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { DayPicker } from 'react-day-picker';
-import { format, isValid, parse, isBefore, isAfter } from 'date-fns';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { format, isValid, parse, isBefore, isAfter, startOfMonth, endOfMonth, startOfDay } from 'date-fns';
+import { enGB } from 'date-fns/locale';
 import 'react-day-picker/style.css';
+import { DayPicker, CalendarMonth, useDayPicker } from 'react-day-picker';
 
 interface DateRangePickerProps {
   startDate: string;
@@ -38,15 +39,15 @@ export default function DateRangePicker({
     return isValid(parsed) ? parsed : undefined;
   };
 
-  // When picker opens, reset local state
+  // When picker opens, sync with current values
   const handleOpen = () => {
     if (disabled) return;
 
     if (!isOpen) {
-      // Opening - start fresh selection, ignore current values
-      setLocalStart('');
-      setLocalEnd('');
-      setSelectingStart(true);
+      // Opening - sync with current values from parent
+      setLocalStart(startDate || '');
+      setLocalEnd(endDate || '');
+      setSelectingStart(true); // Always start with selecting start date first when opening
     }
     setIsOpen(!isOpen);
   };
@@ -56,12 +57,29 @@ export default function DateRangePicker({
     const clickedDateStr = format(day, 'yyyy-MM-dd');
 
     if (selectingStart) {
-      // First click - set local start
+      // Set local start
       setLocalStart(clickedDateStr);
-      setLocalEnd('');
+      
+      // If we already have an end date that is before the new start, clear it
+      if (localEnd) {
+        const parsedEnd = parseDate(localEnd);
+        if (parsedEnd && isBefore(parsedEnd, day)) {
+          setLocalEnd('');
+          onEndChange('');
+        }
+      }
+      
       setSelectingStart(false);
+      
+      onStartChange(clickedDateStr);
+      if (localEnd) {
+        const parsedEnd = parseDate(localEnd);
+        if (parsedEnd && !isBefore(parsedEnd, day)) {
+          onEndChange(localEnd);
+        }
+      }
     } else {
-      // Second click - set local end, then commit to parent
+      // Selecting end
       const currentStart = parseDate(localStart);
 
       if (currentStart) {
@@ -69,26 +87,128 @@ export default function DateRangePicker({
         let finalEnd = clickedDateStr;
 
         if (isBefore(day, currentStart)) {
-          // Swap if clicked before start
+          // If clicked before start, make it the new start
           finalStart = clickedDateStr;
-          finalEnd = localStart;
+          setLocalStart(finalStart);
+          // Stay on end selection for the next click
+          onStartChange(finalStart);
+        } else {
+          // Normal end selection
+          setLocalEnd(finalEnd);
+          onEndChange(finalEnd);
+          
+          // Close after a short delay for better UX
+          setTimeout(() => {
+            setIsOpen(false);
+          }, 400);
         }
-
-        setLocalStart(finalStart);
-        setLocalEnd(finalEnd);
-
-        // Commit to parent
-        onStartChange(finalStart);
-        onEndChange(finalEnd);
-
-        // Close after delay
-        setTimeout(() => {
-          setIsOpen(false);
-          setSelectingStart(true);
-        }, 200);
+      } else {
+        // No start date yet, treat as start
+        setLocalStart(clickedDateStr);
+        onStartChange(clickedDateStr);
+        setSelectingStart(false);
       }
     }
   };
+
+  // Function to select an entire month
+  const handleSelectMonth = useCallback((month: Date) => {
+    // Always use first day of month as start, last day as end
+    const start = startOfMonth(month);
+    const end = endOfMonth(month);
+    const today = startOfDay(new Date());
+
+    // If the whole month is in the past, ignore
+    if (isBefore(end, today)) return;
+
+    // Don't select disabled (past) start dates for current month
+    const finalStart = isBefore(start, today) ? today : start;
+
+    const startStr = format(finalStart, 'yyyy-MM-dd');
+    const endStr = format(end, 'yyyy-MM-dd');
+
+    // Update local state
+    setLocalStart(startStr);
+    setLocalEnd(endStr);
+    
+    // Update parent state immediately
+    onStartChange(startStr);
+    onEndChange(endStr);
+
+    // Reset selection mode and close immediately (no perceptible delay)
+    setSelectingStart(true);
+    setIsOpen(false);
+  }, [onStartChange, onEndChange]);
+
+  type MonthCaptionProps = { calendarMonth: CalendarMonth; displayIndex: number } & React.HTMLAttributes<HTMLDivElement>;
+
+  // Month caption:
+  // - click month name => select whole month range
+  const CustomMonthCaption = useCallback((props: MonthCaptionProps) => {
+    const { calendarMonth, displayIndex, className, ...rest } = props;
+    const { months, previousMonth, nextMonth, goToMonth } = useDayPicker();
+    const monthDate = calendarMonth.date; // first day of the month
+    const isFirst = displayIndex === 0;
+    const isLast = displayIndex === months.length - 1;
+
+    return (
+      <div
+        {...rest}
+        className={`flex items-center justify-between gap-3 ${className ?? ''}`}
+      >
+        {/* Left arrow (only on left month) */}
+        <div className="w-10 flex items-center justify-start">
+          {isFirst && (
+            <button
+              type="button"
+              disabled={!previousMonth}
+              onClick={() => previousMonth && goToMonth(previousMonth)}
+              className="h-9 w-9 rounded-full border-2 border-gray-300 bg-gray-50 text-gray-900 shadow-sm hover:bg-indigo-50 hover:border-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer dark:border-gray-400 dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-indigo-100"
+              aria-label="Previous month"
+            >
+              <svg className="mx-auto h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Month name (click selects entire month) */}
+        <div className="flex-1 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => isValid(monthDate) && handleSelectMonth(monthDate)}
+            className="group flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-gray-900 hover:bg-indigo-50 hover:border-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-indigo-900/30 transition-colors whitespace-nowrap cursor-pointer"
+            title="Click to select the whole month"
+          >
+            <span className="text-[14px] font-bold">
+              {format(monthDate, 'MMMM yyyy')}
+            </span>
+            <svg className="h-4 w-4 text-gray-400 group-hover:text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Right arrow (only on right month) */}
+        <div className="w-10 flex items-center justify-end">
+          {isLast && (
+            <button
+              type="button"
+              disabled={!nextMonth}
+              onClick={() => nextMonth && goToMonth(nextMonth)}
+              className="h-9 w-9 rounded-full border-2 border-gray-300 bg-gray-50 text-gray-900 shadow-sm hover:bg-indigo-50 hover:border-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer dark:border-gray-400 dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-indigo-100"
+              aria-label="Next month"
+            >
+              <svg className="mx-auto h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }, [handleSelectMonth]);
 
   // Use local values while open, parent values when closed
   const displayStart = isOpen ? localStart : startDate;
@@ -193,30 +313,38 @@ export default function DateRangePicker({
           {/* Header */}
           <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3">
-              <div className={`flex-1 p-2 rounded-lg text-center text-sm font-medium transition-all ${
-                selectingStart
-                  ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-              }`}>
+              <button
+                type="button"
+                onClick={() => setSelectingStart(true)}
+                className={`flex-1 p-2 rounded-lg text-center text-sm font-medium transition-all cursor-pointer ${
+                  selectingStart
+                    ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
                 <div className="text-xs uppercase tracking-wide mb-0.5 opacity-70">Departure</div>
                 <div>{localStart ? formatDisplayDate(localStart) : 'Select...'}</div>
-              </div>
+              </button>
               <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-              <div className={`flex-1 p-2 rounded-lg text-center text-sm font-medium transition-all ${
-                !selectingStart
-                  ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-              }`}>
+              <button
+                type="button"
+                onClick={() => setSelectingStart(false)}
+                className={`flex-1 p-2 rounded-lg text-center text-sm font-medium transition-all cursor-pointer ${
+                  !selectingStart
+                    ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
                 <div className="text-xs uppercase tracking-wide mb-0.5 opacity-70">Return</div>
                 <div>{localEnd ? formatDisplayDate(localEnd) : (selectingStart ? '—' : 'Select...')}</div>
-              </div>
+              </button>
             </div>
           </div>
 
           <DayPicker
-            mode="single"
+            mode="range"
             onSelect={() => {}}
             onDayClick={handleDayClick}
             numberOfMonths={2}
@@ -224,6 +352,14 @@ export default function DateRangePicker({
             showOutsideDays={false}
             disabled={{ before: new Date() }}
             modifiers={modifiers}
+            locale={enGB}
+            formatters={{
+              formatWeekdayName: (day) => format(day, 'EEE'),
+            }}
+            components={{
+              MonthCaption: CustomMonthCaption,
+              Nav: () => null
+            }}
             modifiersClassNames={{
               rangeStart: 'rdp-range-start',
               rangeEnd: 'rdp-range-end',
@@ -231,15 +367,12 @@ export default function DateRangePicker({
             }}
             classNames={{
               root: 'rdp-calendar',
-              months: 'flex gap-6 flex-col sm:flex-row',
+              months: 'flex gap-6 flex-col sm:flex-row relative',
               month: 'rdp-month-container',
-              month_caption: 'flex justify-center items-center h-10 mb-2',
+              month_caption: 'h-12 mb-4',
               caption_label: 'text-base font-bold text-gray-900 dark:text-white',
-              nav: 'flex items-center',
-              button_previous: 'absolute left-4 top-[5.5rem] p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors',
-              button_next: 'absolute right-4 top-[5.5rem] p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors',
               weekdays: 'flex mb-1',
-              weekday: 'w-10 h-8 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase',
+              weekday: 'w-10 h-8 flex items-center justify-center text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tighter',
               week: 'flex',
               day: 'w-10 h-10 p-0.5',
               day_button: 'rdp-day-btn',
@@ -266,7 +399,7 @@ export default function DateRangePicker({
                 setIsOpen(false);
                 setSelectingStart(true);
               }}
-              className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors cursor-pointer"
             >
               Done
             </button>

@@ -33,6 +33,24 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Ensure all buttons show pointer cursor on hover */
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Ensure all checkboxes show pointer cursor on hover */
+input[type="checkbox"] {
+  cursor: pointer;
+}
+
+input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+}
+
 /* Fix autocomplete styling for light mode */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
@@ -206,3 +224,5 @@ input:-webkit-autofill:active {
   color: #e0e7ff !important;
   border-color: rgba(129, 140, 248, 0.5) !important;
 }
+
+/* Navigation arrows are now rendered in custom MonthCaption */
