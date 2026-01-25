@@ -23,6 +23,12 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
+class SerpApiBeyondRangeError(Exception):
+    """Raised when search dates are beyond SerpAPI's ~6 month window."""
+    pass
+
+
 _CALLS = {"searches": 0}
 _ERRORS = {"api_errors": 0}
 
@@ -158,19 +164,37 @@ def discover_destinations(
     from_dt = datetime.strptime(from_date, "%Y-%m-%d").date()
     to_dt = datetime.strptime(to_date, "%Y-%m-%d").date()
     today = datetime.utcnow().date()
-    months_ahead = (from_dt - today).days // 30 if from_dt > today else 0
 
     logger.info(
         f"[serpapi] Discovering from {origin} | dates: {from_date} to {to_date} | "
         f"trip: {trip_length}d | travel_duration={travel_duration} | months={months}"
     )
+    # SerpAPI works for current month + 5 months ahead.
+    # January → can search up to end of June, February → end of July, etc.
+    cutoff_month = today.month + 5
+    cutoff_year = today.year
+    if cutoff_month > 12:
+        cutoff_month -= 12
+        cutoff_year += 1
+    # Get last day of the cutoff month
+    if cutoff_month == 12:
+        cutoff_date = datetime(cutoff_year, 12, 31).date()
+    else:
+        cutoff_date = (datetime(cutoff_year, cutoff_month + 1, 1) - datetime.resolution).date()
+
     logger.info(
-        f"[serpapi] Date context: today={today} | from_dt={from_dt} to_dt={to_dt} | "
-        f"~{months_ahead} months from today. SerpAPI only supports 'next 6 months' for month param."
+        f"[serpapi] Date context: today={today} | from_dt={from_dt} | to_dt={to_dt} | "
+        f"SerpAPI cutoff={cutoff_date} (month {today.month} + 5 = month {cutoff_month})"
     )
-    if months_ahead > 6:
+
+    # Check END date - if any part of the search window extends beyond cutoff, use fallback
+    if to_dt > cutoff_date:
         logger.warning(
-            f"[serpapi] Requested range is >6 months from today. SerpAPI may return no results for those months."
+            f"[serpapi] End date {to_dt} is beyond SerpAPI cutoff {cutoff_date}. "
+            "Raising SerpApiBeyondRangeError for fallback handling."
+        )
+        raise SerpApiBeyondRangeError(
+            f"Search end date {to_dt} is beyond SerpAPI range (max: {cutoff_date})."
         )
 
     # Fetch all months, keep all flights (not just cheapest per airport)

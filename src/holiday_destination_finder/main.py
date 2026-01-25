@@ -3,7 +3,7 @@ from holiday_destination_finder.providers.amadeus import get_best_offer_in_windo
 from holiday_destination_finder.scoring import total_score
 from holiday_destination_finder.providers.ryanair_test import find_cheapest_offer, get_cheapest_ryanair_offer_for_dates
 from holiday_destination_finder.providers.wizzair_test import find_cheapest_trip
-from holiday_destination_finder.providers.serpapi_test import discover_destinations, serpapi_call_stats
+from holiday_destination_finder.providers.serpapi_test import discover_destinations, serpapi_call_stats, SerpApiBeyondRangeError
 from pathlib import Path
 import csv, argparse, datetime, threading, time, os, requests, logging, re
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -383,6 +383,99 @@ def _process_single_destination(
     return None
 
 
+def _search_with_fallback_providers(
+    origin: str,
+    start: str,
+    end: str,
+    trip_length: int,
+    top_n: int = 10,
+    verbose: bool = True,
+    progress_cb = None,
+) -> list[dict]:
+    """
+    Fallback search using Ryanair and Wizzair for dates beyond SerpAPI's range.
+    Uses CSV-based destination list and queries each provider directly.
+    """
+    providers = ["ryanair", "wizzair"]
+
+    logger.info(f"[fallback] Starting extended search with {providers} for dates {start} to {end}")
+
+    # Notify frontend of extended search mode via progress callback
+    if progress_cb:
+        try:
+            progress_cb(0, 0, "__EXTENDED_SEARCH_MODE__", "")
+        except Exception:
+            pass
+
+    # Use web or local CSV based on environment
+    if os.getenv("RENDER") == "true":
+        CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities_web.csv"
+        logger.info("[fallback] Using web cities file: cities_web.csv")
+        max_workers = 3
+    else:
+        CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities_local.csv"
+        logger.info("[fallback] Using local cities file: cities_local.csv")
+        max_workers = 10
+
+    # Read all destinations
+    destinations = []
+    with open(CITIES_CSV, newline="", encoding="utf-8") as cities_csv:
+        reader = csv.DictReader(cities_csv)
+        destinations = list(reader)
+
+    total = len(destinations)
+    logger.info(f"[fallback] Processing {total} destinations with {max_workers} parallel workers")
+
+    results: list[dict] = []
+    weather_cache: dict[tuple[float, float, str, str], dict] = {}
+    weather_cache_lock = threading.Lock()
+    processed_lock = threading.Lock()
+
+    # Process destinations in parallel
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {}
+        for idx, row in enumerate(destinations, start=1):
+            future = executor.submit(
+                _process_single_destination,
+                row, idx, total, origin, start, end, trip_length, providers,
+                weather_cache, weather_cache_lock, verbose, progress_cb
+            )
+            futures[future] = idx
+
+        for future in as_completed(futures):
+            idx = futures[future]
+            try:
+                result = future.result()
+                if result:
+                    with processed_lock:
+                        results.append(result)
+            except Exception as e:
+                if verbose:
+                    logger.error(f"[fallback] Failed to process destination {idx}: {e}")
+
+    prices = [r["flight_price"] for r in results if r.get("flight_price") is not None]
+    if not prices:
+        logger.info("[fallback] No results found from Ryanair+Wizzair")
+        return []
+
+    min_price = min(prices)
+    max_price = max(prices)
+
+    for r in results:
+        r["score"] = total_score(
+            r["weather_data"],
+            r["flight_price"],
+            r["total_stops"],
+            min_price,
+            max_price,
+        )
+        r.pop("weather_data", None)
+
+    results.sort(key=lambda x: float(x.get('score', 0)), reverse=True)
+    logger.info(f"[fallback] Returning {len(results)} scored destinations from extended search")
+    return results[:top_n]
+
+
 def _search_with_serpapi(
     origin: str,
     start: str,
@@ -394,12 +487,19 @@ def _search_with_serpapi(
 ) -> list[dict]:
     """
     Search using SerpAPI - discovers destinations AND flights in one call.
-    No CSV needed.
+    Falls back to Ryanair+Wizzair for dates beyond SerpAPI's ~6 month range.
+    No CSV needed for SerpAPI path.
     """
     logger.info(f"[serpapi] Discovering destinations from {origin}")
 
-    # Get all destinations with flight data from SerpAPI
-    serpapi_results = discover_destinations(origin, start, end, trip_length)
+    # Try SerpAPI first, fall back to Ryanair+Wizzair for far-future dates
+    try:
+        serpapi_results = discover_destinations(origin, start, end, trip_length)
+    except SerpApiBeyondRangeError as e:
+        logger.info(f"[serpapi] {e} - falling back to Ryanair+Wizzair")
+        return _search_with_fallback_providers(
+            origin, start, end, trip_length, top_n, verbose, progress_cb
+        )
 
     if not serpapi_results:
         logger.info("[serpapi] No destinations found")

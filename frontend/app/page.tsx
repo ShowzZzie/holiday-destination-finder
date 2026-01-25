@@ -161,8 +161,31 @@ function AirlineDisplay({ airlines }: { airlines: string }) {
   );
 }
 
+// SerpAPI only works for current month + 5 months ahead.
+// January → can search up to end of June, February → end of July, etc.
+// Check END date - if any part of the window extends beyond, use fallback.
+function isExtendedDateRange(endDate: string): boolean {
+  if (!endDate) return false;
+  const end = new Date(endDate);
+  const today = new Date();
+
+  // Calculate the last day of (current month + 5)
+  // new Date(year, month + 1, 0) gives last day of that month
+  const cutoffDate = new Date(today.getFullYear(), today.getMonth() + 6, 0);
+
+  return end > cutoffDate;
+}
+
 export default function Home() {
   const { t } = useLanguage();
+
+  // Debug mode: show provider selection UI when ?debug=true is in URL
+  const [isDebugMode, setIsDebugMode] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setIsDebugMode(params.get('debug') === 'true');
+  }, []);
+
   const [formData, setFormData] = useState<SearchParams>({
     origin: '',
     start: '',
@@ -171,7 +194,7 @@ export default function Home() {
     providers: ['serpapi'],
     top_n: 10,
   });
-  
+
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -822,6 +845,28 @@ export default function Home() {
     }
   }, []);
 
+  // Auto-select providers based on date range when not in debug mode
+  // SerpAPI only works for ~5 months ahead, use Ryanair/Wizzair for extended dates
+  useEffect(() => {
+    if (isDebugMode) return; // Don't auto-change in debug mode
+
+    const isExtended = isExtendedDateRange(formData.end);
+    const newProviders = isExtended ? ['ryanair', 'wizzair'] : ['serpapi'];
+
+    // Only update if providers actually changed
+    if (JSON.stringify(formData.providers) !== JSON.stringify(newProviders)) {
+      const originIsKgmid = formData.origin.startsWith('/');
+      // If switching to extended mode and origin is a kgmid (city/country), clear it
+      // because ryanair/wizzair only work with specific airport IATA codes
+      if (isExtended && originIsKgmid) {
+        setOriginInput('');
+        setFormData(prev => ({ ...prev, providers: newProviders, origin: '' }));
+      } else {
+        setFormData(prev => ({ ...prev, providers: newProviders }));
+      }
+    }
+  }, [formData.end, isDebugMode]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex">
       {/* Sidebar */}
@@ -1028,6 +1073,12 @@ export default function Home() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('travelDates')}
+                  {/* Inline warning for extended date range */}
+                  {isExtendedDateRange(formData.end) && (
+                    <span className="ml-2 text-xs font-normal text-amber-600 dark:text-amber-400">
+                      ⚠ Extended search (Ryanair/Wizzair only)
+                    </span>
+                  )}
                 </label>
                 <DateRangePicker
                   startDate={formData.start}
@@ -1118,27 +1169,30 @@ export default function Home() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flightProviders')}
-              </label>
-              <div className="flex flex-wrap gap-4">
-                {['serpapi', 'ryanair', 'wizzair', 'amadeus'].map(provider => (
-                  <label key={provider} className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.providers.includes(provider)}
-                      onChange={(e) => handleProviderChange(provider, e.target.checked)}
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
-                      disabled={isSearching}
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">
-                      {provider}
-                    </span>
-                  </label>
-                ))}
+            {/* Provider selection - only visible in debug mode (?debug=true) */}
+            {isDebugMode && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('flightProviders')} <span className="text-xs text-amber-600">(Debug Mode)</span>
+                </label>
+                <div className="flex flex-wrap gap-4">
+                  {['serpapi', 'ryanair', 'wizzair', 'amadeus'].map(provider => (
+                    <label key={provider} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.providers.includes(provider)}
+                        onChange={(e) => handleProviderChange(provider, e.target.checked)}
+                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                        disabled={isSearching}
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">
+                        {provider}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {error && (
               <div className="p-4 bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-300 rounded-lg">
