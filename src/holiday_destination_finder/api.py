@@ -161,52 +161,31 @@ def health():
 _IATA_PATTERN = re.compile(r"^[A-Z]{3}$")
 _VALID_PROVIDERS = {"amadeus", "ryanair", "wizzair", "serpapi"}
 
-def _validate_origin_iata(origin: str) -> str:
-    """Validate and normalize airport IATA code."""
+def _validate_origin(origin: str) -> str:
+    """Validate origin - can be IATA code or kgmid (country/city)."""
     origin = origin.strip()
-    if origin.startswith('/'):
-        # kgmid passed but non-serpapi provider selected - give clear error
-        raise HTTPException(
-            status_code=422,
-            detail=f"City/country search (Google ID '{origin}') requires SerpAPI provider only. "
-                   f"Please select a specific airport or use only SerpAPI as the provider."
-        )
 
-    origin = origin.upper()
-    if not _IATA_PATTERN.match(origin):
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid origin '{origin}': must be a 3-letter IATA airport code (e.g., WRO, LHR, JFK)"
-        )
-    return origin
-
-def _validate_origin_serpapi(origin: str) -> str:
-    """Validate origin for SerpAPI (supports IATA or kgmid)."""
-    origin = origin.strip()
+    # If it's a kgmid, validate format
     if origin.startswith('/'):
-        # kgmid is case-sensitive but usually lowercase. We support /m/ and /g/.
         if not re.match(r"^/(m|g)/[A-Za-z0-9_]+$", origin, re.IGNORECASE):
             raise HTTPException(
                 status_code=422,
                 detail=f"Invalid Google ID '{origin}': must start with /m/ or /g/"
             )
         return origin
-    
+
     # Otherwise treat as IATA
-    upper = origin.upper()
-    if _IATA_PATTERN.match(upper):
-        return upper
-        
-    raise HTTPException(
-        status_code=422,
-        detail=f"Invalid origin '{origin}': must be a 3-letter IATA code or a Google ID starting with /m/ or /g/."
-    )
+    origin = origin.upper()
+    if not _IATA_PATTERN.match(origin):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid origin '{origin}': must be a 3-letter IATA airport code (e.g., WRO, LHR, JFK) or a Google ID (e.g., /m/05qhw)"
+        )
+    return origin
 
 def _validate_origin_for_providers(origin: str, providers: List[str]) -> str:
-    """Validate origin based on selected providers."""
-    if any(p.lower() != "serpapi" for p in providers):
-        return _validate_origin_iata(origin)
-    return _validate_origin_serpapi(origin)
+    """Validate origin based on selected providers. All providers now support kgmid."""
+    return _validate_origin(origin)
 
 def _validate_dates(start: date, end: date, trip_length: int) -> None:
     """Validate date range and trip length compatibility."""
@@ -307,9 +286,19 @@ def job(job_id: str):
             except ValueError:
                 out["processed"] = data["processed"]
                 out["total"] = data["total"]
-        
+
         if "current" in data:
             out["current"] = data["current"]
+
+        # Multi-airport origin progress
+        if "origin_airport" in data:
+            out["origin_airport"] = data["origin_airport"]
+        if "origin_airport_idx" in data and "origin_airport_total" in data:
+            try:
+                out["origin_airport_idx"] = int(data["origin_airport_idx"])
+                out["origin_airport_total"] = int(data["origin_airport_total"])
+            except ValueError:
+                pass
 
     if "result" in data:
         out["payload"] = json.loads(data["result"])

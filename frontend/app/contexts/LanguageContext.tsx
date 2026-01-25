@@ -73,6 +73,12 @@ const translations: Record<Language, Record<string, string>> = {
     // Departure info
     'departingFrom': 'Departing from',
     'anyAirport': 'any airport',
+    // Google Flights
+    'viewOnGoogleFlights': 'View on Google Flights',
+    'book': 'Book',
+    // Multi-airport search
+    'searchingFrom': 'Searching from',
+    'airports': 'airports',
   },
   pl: {
     'title': 'Wyszukiwarka Destynacji Wakacyjnych',
@@ -133,6 +139,12 @@ const translations: Record<Language, Record<string, string>> = {
     // Departure info
     'departingFrom': 'Wylot z',
     'anyAirport': 'dowolne lotnisko',
+    // Google Flights
+    'viewOnGoogleFlights': 'Zobacz w Google Flights',
+    'book': 'Rezerwuj',
+    // Multi-airport search
+    'searchingFrom': 'Szukanie z',
+    'airports': 'lotnisk',
   },
   es: {
     'title': 'Buscador de Destinos Vacacionales',
@@ -193,6 +205,12 @@ const translations: Record<Language, Record<string, string>> = {
     // Departure info
     'departingFrom': 'Saliendo desde',
     'anyAirport': 'cualquier aeropuerto',
+    // Google Flights
+    'viewOnGoogleFlights': 'Ver en Google Flights',
+    'book': 'Reservar',
+    // Multi-airport search
+    'searchingFrom': 'Buscando desde',
+    'airports': 'aeropuertos',
   },
   pt: {
     'title': 'Localizador de Destinos de Férias',
@@ -253,6 +271,12 @@ const translations: Record<Language, Record<string, string>> = {
     // Departure info
     'departingFrom': 'Partindo de',
     'anyAirport': 'qualquer aeroporto',
+    // Google Flights
+    'viewOnGoogleFlights': 'Ver no Google Flights',
+    'book': 'Reservar',
+    // Multi-airport search
+    'searchingFrom': 'A pesquisar de',
+    'airports': 'aeroportos',
   },
   de: {
     'title': 'Urlaubsziel-Finder',
@@ -313,6 +337,12 @@ const translations: Record<Language, Record<string, string>> = {
     // Departure info
     'departingFrom': 'Abflug von',
     'anyAirport': 'beliebiger Flughafen',
+    // Google Flights
+    'viewOnGoogleFlights': 'Auf Google Flights ansehen',
+    'book': 'Buchen',
+    // Multi-airport search
+    'searchingFrom': 'Suche von',
+    'airports': 'Flughäfen',
   },
   fr: {
     'title': 'Recherche de Destinations de Vacances',
@@ -373,6 +403,12 @@ const translations: Record<Language, Record<string, string>> = {
     // Departure info
     'departingFrom': 'Départ de',
     'anyAirport': 'n\'importe quel aéroport',
+    // Google Flights
+    'viewOnGoogleFlights': 'Voir sur Google Flights',
+    'book': 'Réserver',
+    // Multi-airport search
+    'searchingFrom': 'Recherche depuis',
+    'airports': 'aéroports',
   },
 };
 

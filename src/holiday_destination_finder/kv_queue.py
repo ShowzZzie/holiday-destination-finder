@@ -40,13 +40,27 @@ def set_failed(job_id: str, error: str):
     r.hdel(key, "processed", "total", "current")
     r.expire(key, JOB_TTL_S)
 
-def set_progress(job_id: str, processed: int, total: int, city: str | None = None, airport: str | None = None):
+def set_progress(
+    job_id: str,
+    processed: int,
+    total: int,
+    city: str | None = None,
+    airport: str | None = None,
+    origin_airport: str | None = None,
+    origin_airport_idx: int | None = None,
+    origin_airport_total: int | None = None
+):
     mapping = {
         "processed": str(processed),
         "total": str(total)
     }
     if city and airport:
         mapping["current"] = f"{city} ({airport})"
+    # Add origin airport phase info for multi-airport searches
+    if origin_airport and origin_airport_idx is not None and origin_airport_total is not None:
+        mapping["origin_airport"] = origin_airport
+        mapping["origin_airport_idx"] = str(origin_airport_idx)
+        mapping["origin_airport_total"] = str(origin_airport_total)
     r.hset(f"job:{job_id}", mapping=mapping)
     r.expire(f"job:{job_id}", JOB_TTL_S)
 

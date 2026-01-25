@@ -28,12 +28,23 @@ def main():
 
             last_update = 0.0
 
-            def progress_cb(idx: int, total: int, city: str, airport: str):
+            def progress_cb(
+                idx: int,
+                total: int,
+                city: str,
+                airport: str,
+                origin_airport: str = None,
+                origin_airport_idx: int = None,
+                origin_airport_total: int = None
+            ):
                 nonlocal last_update
                 now = time.monotonic()
 
                 if now - last_update >= 1.0:
-                    set_progress(job_id, idx, total, city, airport)
+                    set_progress(
+                        job_id, idx, total, city, airport,
+                        origin_airport, origin_airport_idx, origin_airport_total
+                    )
                     last_update = now
 
             results = search_destinations(origin, start, end, trip_length, providers, top_n=top_n, verbose=False, progress_cb=progress_cb)

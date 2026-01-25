@@ -25,6 +25,7 @@ export interface SearchResult {
   city: string;
   country: string;
   airport: string;
+  origin_airport?: string;  // Departure airport that found this flight
   avg_temp_c: number;
   avg_precip_mm_per_day: number;
   flight_price: number;
@@ -47,6 +48,10 @@ export interface JobStatus {
   processed?: number;
   total?: number;
   current?: string;
+  // Multi-airport origin progress
+  origin_airport?: string;
+  origin_airport_idx?: number;
+  origin_airport_total?: number;
   payload?: {
     meta?: any;
     results?: SearchResult[];

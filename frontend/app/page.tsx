@@ -36,6 +36,23 @@ function getOriginDisplayName(origin: string): string {
   // Fallback - return as-is
   return origin;
 }
+
+// Build Google Flights URL for a specific flight search
+function buildGoogleFlightsUrl(
+  originIata: string,
+  destIata: string,
+  departDate: string,
+  returnDate: string
+): string {
+  // Format dates as YYYY-MM-DD (they should already be in this format)
+  const depDate = departDate.split('T')[0];
+  const retDate = returnDate.split('T')[0];
+
+  // Build the URL using Google Flights search format
+  // Using the natural language query which Google parses well
+  const query = `flights from ${originIata} to ${destIata} on ${depDate} returning ${retDate}`;
+  return `https://www.google.com/travel/flights?q=${encodeURIComponent(query)}`;
+}
 import { getCountryCode, getFlagUrl, getRegion, ALL_REGIONS, Region } from '@/lib/country-flags';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { useCurrency } from '@/app/contexts/CurrencyContext';
@@ -317,8 +334,8 @@ export default function Home() {
       return;
     }
 
-    // Check if only SerpAPI is selected - kgmid (city/country) only works with SerpAPI
-    const onlySerpApi = formData.providers.length === 1 && formData.providers[0] === 'serpapi';
+    // All providers now support country/city kgmid origins
+    // Backend handles expansion to individual airports for Ryanair/WizzAir
 
     const matchedCountries: Country[] = [];
     const matchedCities: CityGroup[] = [];
@@ -331,13 +348,8 @@ export default function Home() {
       const countryMatches = country.name.toLowerCase().includes(q);
 
       if (countryMatches) {
-        // Only show country selection if only SerpAPI is selected
-        if (onlySerpApi) {
-          matchedCountries.push(country);
-        } else {
-          // When other providers are selected, show all airports from matching country
-          matchedAirports.push(...country.airports);
-        }
+        // Show country as an option - backend will iterate through airports if needed
+        matchedCountries.push(country);
       } else {
         // Check for city name matches - group by city
         const cityMatches = new Map<string, AirportData[]>();
@@ -365,10 +377,9 @@ export default function Home() {
         cityMatches.forEach((airports, kgmid) => {
           if (!addedCityKgmids.has(kgmid)) {
             addedCityKgmids.add(kgmid);
-            // Only show city group if:
-            // 1. SerpAPI only is selected AND
-            // 2. City has more than one airport
-            if (onlySerpApi && airports.length > 1) {
+            // Show city group if city has more than one airport
+            // Backend will iterate through airports for all providers
+            if (airports.length > 1) {
               matchedCities.push({
                 name: airports[0].city,
                 kgmid: kgmid,
@@ -376,7 +387,7 @@ export default function Home() {
                 airports: airports,
               });
             } else {
-              // Show airports directly (single airport city or non-serpapi providers)
+              // Single airport city - show airport directly
               matchedAirports.push(...airports);
             }
           }
@@ -631,45 +642,11 @@ export default function Home() {
         throw new Error("Please select an origin from the suggestions (start typing a city, country, or airport name).");
       }
 
-      // Expand origin if it's a kgmid (city/country) and only SerpAPI is selected
-      // This is because SerpAPI google_travel_explore engine works much better with IATA codes
-      // and often returns empty results for country/city kgmids for flexible dates.
-      let finalOrigin = formData.origin;
-      const isOnlySerpApi = formData.providers.length === 1 && formData.providers[0] === 'serpapi';
-      
-      if (isOnlySerpApi && finalOrigin.startsWith('/')) {
-        // Try to find if it's a country
-        const countryMatch = COUNTRIES.find(c => c.kgmid === finalOrigin);
-        if (countryMatch) {
-          finalOrigin = countryMatch.airports.map(a => a.iata).join(',');
-          console.log(`🗺️ Expanded country ${countryMatch.name} to airports: ${finalOrigin}`);
-        } else {
-          // Try to find if it's a city kgmid
-          const cityAirports: string[] = [];
-          COUNTRIES.forEach(c => {
-            c.airports.forEach(a => {
-              if (a.city_kgmid === finalOrigin) {
-                cityAirports.push(a.iata);
-              }
-            });
-          });
-          if (cityAirports.length > 0) {
-            finalOrigin = cityAirports.join(',');
-            console.log(`🏙️ Expanded city kgmid to airports: ${finalOrigin}`);
-          }
-        }
-      }
-
-      // Validate that kgmid origins only work with serpapi-only
-      const originIsKgmid = formData.origin.startsWith('/');
-      if (originIsKgmid && !isOnlySerpApi) {
-        throw new Error("City/country search requires SerpAPI only. Please select a specific airport or use only SerpAPI as the provider.");
-      }
-
       // Debug: log what we're sending
-      console.log('🚀 Submitting search:', { origin: finalOrigin, originalOrigin: formData.origin, providers: formData.providers });
+      // Backend handles kgmid expansion for country/city searches
+      console.log('🚀 Submitting search:', { origin: formData.origin, providers: formData.providers });
 
-      const response = await startSearch({ ...formData, origin: finalOrigin });
+      const response = await startSearch(formData);
       console.log('🔍 Search Job Created - Job ID:', response.job_id);
       console.log('📍 Direct API URL:', `${process.env.NEXT_PUBLIC_API_URL || 'https://holiday-destination-finder.onrender.com'}/jobs/${response.job_id}`);
       
@@ -1281,6 +1258,14 @@ function JobStatusDisplay({ jobStatus, onCancel }: { jobStatus: JobStatus; onCan
             {jobStatus.queue_position === 1 && (
               <span className="ml-2 text-xs">({t('nextInQueue')})</span>
             )}
+          </div>
+        )}
+        {/* Multi-airport origin progress */}
+        {jobStatus.origin_airport && jobStatus.origin_airport_idx && jobStatus.origin_airport_total && (
+          <div className="text-sm text-gray-600 dark:text-gray-400 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-2">
+            <span className="font-medium">{t('searchingFrom')} </span>
+            <span className="font-semibold text-indigo-600 dark:text-indigo-400">{jobStatus.origin_airport}</span>
+            <span className="ml-1">({jobStatus.origin_airport_idx}/{jobStatus.origin_airport_total} {t('airports')})</span>
           </div>
         )}
         {jobStatus.total && jobStatus.processed !== undefined && (
@@ -2032,6 +2017,12 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
     setShowTooltip(isHovering);
   };
 
+  // Build Google Flights URL only when we know the exact departure airport
+  // For SerpAPI with country/city kgmid, origin_airport won't be set since SerpAPI doesn't return it
+  const googleFlightsUrl = result.origin_airport
+    ? buildGoogleFlightsUrl(result.origin_airport, result.airport, result.best_departure, result.best_return)
+    : null;
+
   return (
     <div className="relative">
       <div className={`relative border rounded-xl transition-all hover:shadow-lg overflow-hidden ${
@@ -2107,7 +2098,7 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
             </div>
           </div>
 
-          {/* Bottom row: Dates and Airline */}
+          {/* Bottom row: Dates, Airline, and Book button */}
           <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
             <div className="text-xs text-gray-600 dark:text-gray-400">
               <span>{new Date(result.best_departure).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
@@ -2118,6 +2109,22 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
               <AirlineDisplay airlines={result.airlines} />
             </div>
           </div>
+          {/* Book button row on mobile */}
+          {googleFlightsUrl && (
+            <div className="pt-2">
+              <a
+                href={googleFlightsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                </svg>
+                {t('viewOnGoogleFlights')}
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Desktop Layout */}
@@ -2147,6 +2154,22 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
                 {new Date(result.best_return).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
               </p>
             </div>
+
+            {/* Google Flights button */}
+            {googleFlightsUrl && (
+              <a
+                href={googleFlightsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+                title={t('viewOnGoogleFlights')}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                </svg>
+                {t('book')}
+              </a>
+            )}
 
             {/* Stats - using dynamic widths from CSS variables */}
             <div className="grid grid-cols-5 gap-2 flex-shrink-0" style={{ 

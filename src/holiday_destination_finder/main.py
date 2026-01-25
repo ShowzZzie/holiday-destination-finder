@@ -4,10 +4,11 @@ from holiday_destination_finder.scoring import total_score
 from holiday_destination_finder.providers.ryanair_test import find_cheapest_offer, get_cheapest_ryanair_offer_for_dates
 from holiday_destination_finder.providers.wizzair_test import find_cheapest_trip
 from holiday_destination_finder.providers.serpapi_test import discover_destinations, serpapi_call_stats, SerpApiBeyondRangeError
+from holiday_destination_finder.airports import expand_origin_to_airports, get_origin_display_name
 from pathlib import Path
 import csv, argparse, datetime, threading, time, os, requests, logging, re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Optional
+from typing import Optional, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -365,7 +366,7 @@ def _process_single_destination(
     if best_tup and best_weather is not None:
         flight_price, currency, total_stops, airlines, best_dep, best_ret = best_tup
 
-        return {
+        result = {
             "city": city,
             "country": country,
             "airport": airport,
@@ -379,6 +380,13 @@ def _process_single_destination(
             "best_return": _to_iso(best_ret),
             "weather_data": best_weather,
         }
+        
+        # Only set origin_airport if origin is a valid IATA code (not a kgmid)
+        # This ensures the Book button can build a valid Google Flights URL
+        if origin and not origin.startswith('/') and _IATA_PATTERN.match(origin):
+            result["origin_airport"] = origin
+        
+        return result
 
     return None
 
@@ -399,6 +407,25 @@ def _search_with_fallback_providers(
     providers = ["ryanair", "wizzair"]
 
     logger.info(f"[fallback] Starting extended search with {providers} for dates {start} to {end}")
+
+    # Expand origin to airports if it's a kgmid (country/city)
+    # Ryanair/Wizzair need IATA codes, so we need to iterate through airports
+    origin_airports = expand_origin_to_airports(origin) if origin else []
+    
+    if not origin_airports:
+        logger.error(f"[fallback] Could not expand origin '{origin}' to airports")
+        return []
+    
+    # If multiple airports, use multi-airport search
+    if len(origin_airports) > 1:
+        logger.info(f"[fallback] Multi-airport search: {len(origin_airports)} airports for origin '{origin}'")
+        return _search_multi_airport(
+            origin_airports, start, end, trip_length, providers, top_n, verbose, progress_cb, None
+        )
+    
+    # Single airport - use the standard flow
+    single_origin = origin_airports[0]
+    logger.info(f"[fallback] Single airport search from {single_origin}")
 
     # Notify frontend of extended search mode via progress callback
     if progress_cb:
@@ -437,7 +464,7 @@ def _search_with_fallback_providers(
         for idx, row in enumerate(destinations, start=1):
             future = executor.submit(
                 _process_single_destination,
-                row, idx, total, origin, start, end, trip_length, providers,
+                row, idx, total, single_origin, start, end, trip_length, providers,
                 weather_cache, weather_cache_lock, verbose, progress_cb
             )
             futures[future] = idx
@@ -576,7 +603,7 @@ def _search_with_serpapi(
                 best_weather = weather_info
 
         if best_flight and best_weather:
-            results.append({
+            result_entry = {
                 "city": city,
                 "country": country,
                 "airport": airport,
@@ -589,7 +616,12 @@ def _search_with_serpapi(
                 "best_departure": best_flight["dep_date"],
                 "best_return": best_flight["ret_date"],
                 "weather_data": best_weather,
-            })
+            }
+            # Only set origin_airport if we know the exact departure (IATA code, not kgmid)
+            # SerpAPI with kgmid doesn't tell us which specific airport the flight departs from
+            if not origin.startswith('/'):
+                result_entry["origin_airport"] = origin
+            results.append(result_entry)
 
     if not results:
         return []
@@ -614,6 +646,123 @@ def _search_with_serpapi(
     return results[:top_n]
 
 
+def _search_multi_airport(
+    origin_airports: list[str],
+    start: str,
+    end: str,
+    trip_length: int,
+    providers: list[str],
+    top_n: int,
+    verbose: bool,
+    progress_cb,
+    max_workers: Optional[int]
+) -> list[dict]:
+    """
+    Search for destinations from multiple origin airports (for country/city searches).
+    Iterates through each airport, merges results, and deduplicates by destination.
+    """
+    # Determine CSV file and workers
+    if os.getenv("RENDER") == "true":
+        CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities_web.csv"
+        max_workers = max_workers or 3
+    else:
+        CITIES_CSV = Path(__file__).resolve().parents[2] / "data" / "cities_local.csv"
+        max_workers = max_workers or 10
+
+    # Read all destinations
+    destinations = []
+    with open(CITIES_CSV, newline="", encoding="utf-8") as cities_csv:
+        reader = csv.DictReader(cities_csv)
+        destinations = list(reader)
+
+    total_destinations = len(destinations)
+    total_airports = len(origin_airports)
+
+    logger.info(f"[multi-airport] Searching from {total_airports} airports, {total_destinations} destinations each")
+
+    # Collect results from all airports, keyed by destination airport for deduplication
+    # We keep the best result (lowest price) for each destination
+    best_by_dest: dict[str, dict] = {}
+    weather_cache: dict[tuple[float, float, str, str], dict] = {}
+    weather_cache_lock = threading.Lock()
+
+    for airport_idx, origin_airport in enumerate(origin_airports, start=1):
+        logger.info(f"[multi-airport] Searching from {origin_airport} ({airport_idx}/{total_airports})")
+
+        processed_lock = threading.Lock()
+
+        def make_progress_cb(current_airport: str, airport_idx: int, total_airports: int):
+            """Create a progress callback that includes origin airport info."""
+            def cb(idx: int, total: int, city: str, airport: str):
+                if progress_cb:
+                    # Call the original callback with extended signature
+                    # The worker's progress_cb will handle passing this to set_progress
+                    try:
+                        progress_cb(
+                            idx, total, city, airport,
+                            current_airport, airport_idx, total_airports
+                        )
+                    except TypeError:
+                        # Fallback if callback doesn't support extended args
+                        progress_cb(idx, total, city, airport)
+            return cb
+
+        airport_progress_cb = make_progress_cb(origin_airport, airport_idx, total_airports)
+
+        # Process destinations for this origin airport
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {}
+            for idx, row in enumerate(destinations, start=1):
+                future = executor.submit(
+                    _process_single_destination,
+                    row, idx, total_destinations, origin_airport, start, end, trip_length, providers,
+                    weather_cache, weather_cache_lock, verbose, airport_progress_cb
+                )
+                futures[future] = (idx, row)
+
+            for future in as_completed(futures):
+                idx, row = futures[future]
+                try:
+                    result = future.result()
+                    if result:
+                        dest_airport = result["airport"]
+                        # Keep best result (lowest price) for each destination
+                        if dest_airport not in best_by_dest:
+                            best_by_dest[dest_airport] = result
+                        elif result["flight_price"] < best_by_dest[dest_airport]["flight_price"]:
+                            best_by_dest[dest_airport] = result
+                except Exception as e:
+                    if verbose:
+                        logger.error(f"[multi-airport] Failed for {row.get('city', '?')} from {origin_airport}: {e}")
+
+    results = list(best_by_dest.values())
+    logger.info(f"[multi-airport] Found {len(results)} unique destinations from {total_airports} airports")
+
+    if not results:
+        return []
+
+    # Final scoring with global price range
+    prices = [r["flight_price"] for r in results if r.get("flight_price") is not None]
+    if not prices:
+        return []
+
+    min_price = min(prices)
+    max_price = max(prices)
+
+    for r in results:
+        r["score"] = total_score(
+            r["weather_data"],
+            r["flight_price"],
+            r["total_stops"],
+            min_price,
+            max_price,
+        )
+        r.pop("weather_data", None)
+
+    results.sort(key=lambda x: float(x.get('score', 0)), reverse=True)
+    return results[:top_n]
+
+
 def search_destinations(
     origin: str | None,
     start: str | None,
@@ -629,8 +778,27 @@ def search_destinations(
     providers = _normalize_providers(providers)
 
     # If serpapi is the only provider, use the optimized SerpAPI flow
+    # SerpAPI natively supports kgmid (country/city) origins
     if providers == ["serpapi"]:
         return _search_with_serpapi(origin, start, end, trip_length, top_n, verbose, progress_cb)
+
+    # For non-serpapi providers, check if origin is a kgmid that needs expansion
+    origin_airports = expand_origin_to_airports(origin) if origin else []
+
+    if not origin_airports:
+        logger.error(f"[main] Could not expand origin '{origin}' to airports")
+        return []
+
+    # If we have multiple airports (country/city search), iterate through each
+    if len(origin_airports) > 1:
+        logger.info(f"[main] Multi-airport search: {len(origin_airports)} airports for origin '{origin}'")
+        return _search_multi_airport(
+            origin_airports, start, end, trip_length, providers, top_n, verbose, progress_cb, max_workers
+        )
+
+    # Single airport - use the standard flow
+    single_origin = origin_airports[0]
+    logger.info(f"[main] Single airport search from {single_origin}")
 
     # Original CSV + providers flow
     if os.getenv("RENDER") == "true":
@@ -665,7 +833,7 @@ def search_destinations(
         for idx, row in enumerate(destinations, start=1):
             future = executor.submit(
                 _process_single_destination,
-                row, idx, total, origin, start, end, trip_length, providers,
+                row, idx, total, single_origin, start, end, trip_length, providers,
                 weather_cache, weather_cache_lock, verbose, progress_cb
             )
             futures[future] = idx
