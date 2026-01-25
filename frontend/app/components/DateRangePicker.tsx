@@ -358,7 +358,7 @@ export default function DateRangePicker({
             }}
             components={{
               MonthCaption: CustomMonthCaption,
-              Nav: () => null
+              Nav: () => <></>
             }}
             modifiersClassNames={{
               rangeStart: 'rdp-range-start',
