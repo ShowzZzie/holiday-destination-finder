@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
-import { startSearch, getJobStatus, checkHealth, cancelJob, SearchParams, JobStatus, SearchResult } from '@/lib/api';
+import { startSearch, getJobStatus, checkHealth, cancelJob, resolveDepartureAirport, SearchParams, JobStatus, SearchResult } from '@/lib/api';
 import { COUNTRIES, Country, Airport as AirportData } from '@/lib/airports';
 
 // City grouping for autocomplete
@@ -1204,7 +1204,7 @@ export default function Home() {
         )}
 
         {jobStatus?.status === 'done' && jobStatus.payload?.results && (
-          <ResultsDisplay results={jobStatus.payload.results} />
+          <ResultsDisplay results={jobStatus.payload.results} searchOrigin={formData.origin} />
         )}
         
         {jobStatus?.status === 'done' && jobStatus.payload && !jobStatus.payload.results && (
@@ -1504,7 +1504,7 @@ const defaultFilters: Filters = {
   directOnly: false,
 };
 
-function ResultsDisplay({ results }: { results: SearchResult[] }) {
+function ResultsDisplay({ results, searchOrigin }: { results: SearchResult[]; searchOrigin: string }) {
   const { t } = useLanguage();
   const { formatPrice } = useCurrency();
   const [sortField, setSortField] = useState<SortField>('score');
@@ -1997,6 +1997,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
               result={result}
               rank={index + 1}
               highlightField={sortField}
+              searchOrigin={searchOrigin}
             />
           ))}
         </div>
@@ -2005,7 +2006,7 @@ function ResultsDisplay({ results }: { results: SearchResult[] }) {
   );
 }
 
-function DestinationCard({ result, rank, highlightField }: { result: SearchResult; rank: number; highlightField: SortField }) {
+function DestinationCard({ result, rank, highlightField, searchOrigin }: { result: SearchResult; rank: number; highlightField: SortField; searchOrigin: string }) {
   const { t } = useLanguage();
   const { formatPrice } = useCurrency();
   const countryCode = getCountryCode(result.country);
@@ -2014,6 +2015,10 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
   const scoreButtonRef = useRef<HTMLDivElement>(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+
+  // State for resolving departure airport via Browserless.io
+  const [isResolvingAirport, setIsResolvingAirport] = useState(false);
+  const [resolvedAirport, setResolvedAirport] = useState<string | null>(null);
 
   // Helper to determine if a field is highlighted
   const isHighlighted = (field: SortField) => highlightField === field;
@@ -2029,11 +2034,64 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
     setShowTooltip(isHovering);
   };
 
+  // Determine effective origin airport: known > resolved > null
+  const effectiveOriginAirport = result.origin_airport || resolvedAirport;
+
   // Build Google Flights URL only when we know the exact departure airport
-  // For SerpAPI with country/city kgmid, origin_airport won't be set since SerpAPI doesn't return it
-  const googleFlightsUrl = result.origin_airport
-    ? buildGoogleFlightsUrl(result.origin_airport, result.airport, result.best_departure, result.best_return)
+  const googleFlightsUrl = effectiveOriginAirport
+    ? buildGoogleFlightsUrl(effectiveOriginAirport, result.airport, result.best_departure, result.best_return)
     : null;
+
+  // Check if we need to resolve the airport (searchOrigin is a kgmid and no origin_airport)
+  const needsAirportResolution = !result.origin_airport && !resolvedAirport && searchOrigin.startsWith('/');
+
+  // Handle Book button click - resolve airport if needed, then navigate
+  const handleBookClick = async (e: React.MouseEvent) => {
+    // If we already have a URL, let the link work normally
+    if (googleFlightsUrl) {
+      return;
+    }
+
+    // Prevent default navigation
+    e.preventDefault();
+
+    if (!needsAirportResolution) {
+      return;
+    }
+
+    setIsResolvingAirport(true);
+
+    try {
+      const depDate = result.best_departure.split('T')[0];
+      const retDate = result.best_return.split('T')[0];
+
+      const response = await resolveDepartureAirport(
+        searchOrigin,
+        result.airport,
+        depDate,
+        retDate
+      );
+
+      if (response.airport) {
+        setResolvedAirport(response.airport);
+        // Build URL and navigate
+        const url = buildGoogleFlightsUrl(response.airport, result.airport, result.best_departure, result.best_return);
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        console.error('Could not resolve departure airport:', response.error);
+        // Fallback: open Google Flights with the kgmid (user will see the popup)
+        const fallbackUrl = `https://www.google.com/travel/flights?q=flights+from+${encodeURIComponent(searchOrigin)}+to+${result.airport}`;
+        window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+      }
+    } catch (error) {
+      console.error('Error resolving departure airport:', error);
+      // Fallback on error
+      const fallbackUrl = `https://www.google.com/travel/flights?q=flights+to+${result.airport}`;
+      window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+    } finally {
+      setIsResolvingAirport(false);
+    }
+  };
   
   // Build Booking.com URL for hotels (always available since we have city and dates)
   const bookingComUrl = buildBookingComUrl(result.city, result.country, result.best_departure, result.best_return);
@@ -2126,17 +2184,34 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
           </div>
           {/* Book buttons row on mobile */}
           <div className="pt-2 flex gap-2">
-            {googleFlightsUrl && (
+            {(googleFlightsUrl || needsAirportResolution) && (
               <a
-                href={googleFlightsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+                href={googleFlightsUrl || '#'}
+                target={googleFlightsUrl ? '_blank' : undefined}
+                rel={googleFlightsUrl ? 'noopener noreferrer' : undefined}
+                onClick={handleBookClick}
+                className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
+                  isResolvingAirport
+                    ? 'bg-indigo-400 cursor-wait'
+                    : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
-                </svg>
-                {t('book')}
+                {isResolvingAirport ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                      <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+                    </svg>
+                    {t('findingFlight') || 'Finding...'}
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                    </svg>
+                    {t('book')}
+                  </>
+                )}
               </a>
             )}
             <a
@@ -2255,18 +2330,35 @@ function DestinationCard({ result, rank, highlightField }: { result: SearchResul
 
             {/* Book buttons - between price and airline */}
             <div className="flex-shrink-0 flex flex-col gap-1.5">
-              {googleFlightsUrl && (
+              {(googleFlightsUrl || needsAirportResolution) && (
                 <a
-                  href={googleFlightsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+                  href={googleFlightsUrl || '#'}
+                  target={googleFlightsUrl ? '_blank' : undefined}
+                  rel={googleFlightsUrl ? 'noopener noreferrer' : undefined}
+                  onClick={handleBookClick}
+                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-lg transition-colors ${
+                    isResolvingAirport
+                      ? 'bg-indigo-400 cursor-wait'
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
                   title={t('viewOnGoogleFlights')}
                 >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
-                  </svg>
-                  {t('book')}
+                  {isResolvingAirport ? (
+                    <>
+                      <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                        <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+                      </svg>
+                      {t('findingFlight') || 'Finding...'}
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                      </svg>
+                      {t('book')}
+                    </>
+                  )}
                 </a>
               )}
               <a

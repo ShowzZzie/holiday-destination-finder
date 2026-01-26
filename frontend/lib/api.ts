@@ -121,3 +121,38 @@ export async function cancelJob(jobId: string): Promise<void> {
     throw new Error(`Failed to cancel job: ${error}`);
   }
 }
+
+export interface ResolveDepartureResponse {
+  airport: string | null;
+  source?: string;
+  error?: string;
+}
+
+/**
+ * Resolve the cheapest departure airport when searching from a country/city umbrella.
+ * Uses headless browser to load Google Flights and extract the suggested cheaper airport.
+ */
+export async function resolveDepartureAirport(
+  origin: string,
+  destination: string,
+  departure: string,
+  returnDate: string
+): Promise<ResolveDepartureResponse> {
+  const params = new URLSearchParams({
+    origin,
+    destination,
+    departure,
+    return: returnDate,
+  });
+
+  const response = await fetch(`${API_BASE_URL}/resolve-departure?${params.toString()}`, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to resolve departure airport: ${error}`);
+  }
+
+  return response.json();
+}

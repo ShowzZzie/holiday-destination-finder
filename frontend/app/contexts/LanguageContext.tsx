@@ -80,6 +80,8 @@ const translations: Record<Language, Record<string, string>> = {
     // Multi-airport search
     'searchingFrom': 'Searching from',
     'airports': 'airports',
+    // Resolving airport
+    'findingFlight': 'Finding...',
   },
   pl: {
     'title': 'Wyszukiwarka Destynacji Wakacyjnych',
@@ -147,6 +149,8 @@ const translations: Record<Language, Record<string, string>> = {
     // Multi-airport search
     'searchingFrom': 'Szukanie z',
     'airports': 'lotnisk',
+    // Resolving airport
+    'findingFlight': 'Szukam...',
   },
   es: {
     'title': 'Buscador de Destinos Vacacionales',
@@ -214,6 +218,8 @@ const translations: Record<Language, Record<string, string>> = {
     // Multi-airport search
     'searchingFrom': 'Buscando desde',
     'airports': 'aeropuertos',
+    // Resolving airport
+    'findingFlight': 'Buscando...',
   },
   pt: {
     'title': 'Localizador de Destinos de Férias',
@@ -281,6 +287,8 @@ const translations: Record<Language, Record<string, string>> = {
     // Multi-airport search
     'searchingFrom': 'A pesquisar de',
     'airports': 'aeroportos',
+    // Resolving airport
+    'findingFlight': 'A procurar...',
   },
   de: {
     'title': 'Urlaubsziel-Finder',
@@ -348,6 +356,8 @@ const translations: Record<Language, Record<string, string>> = {
     // Multi-airport search
     'searchingFrom': 'Suche von',
     'airports': 'Flughäfen',
+    // Resolving airport
+    'findingFlight': 'Suche...',
   },
   fr: {
     'title': 'Recherche de Destinations de Vacances',
@@ -415,6 +425,8 @@ const translations: Record<Language, Record<string, string>> = {
     // Multi-airport search
     'searchingFrom': 'Recherche depuis',
     'airports': 'aéroports',
+    // Resolving airport
+    'findingFlight': 'Recherche...',
   },
 };
 
