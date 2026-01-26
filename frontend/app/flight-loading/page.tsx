@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getGoogleFlightsUrl } from '@/lib/api';
 
-export default function FlightLoadingPage() {
+function FlightLoadingContent() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState('Finding the best flight...');
 
@@ -56,21 +56,44 @@ export default function FlightLoadingPage() {
   }, [searchParams]);
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-indigo-100 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900">
-      <div className="text-center px-6 py-10 rounded-2xl bg-white/80 dark:bg-gray-900/80 shadow-xl border border-gray-200 dark:border-gray-800 max-w-md w-full">
-        <div className="mx-auto mb-6 w-14 h-14 rounded-full bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-          <svg className="w-8 h-8 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" strokeOpacity="0.2" />
-            <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
-          </svg>
-        </div>
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-          Preparing your Google Flights search
-        </h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          {status}
-        </p>
+    <div className="text-center px-6 py-10 rounded-2xl bg-white/80 dark:bg-gray-900/80 shadow-xl border border-gray-200 dark:border-gray-800 max-w-md w-full">
+      <div className="mx-auto mb-6 w-14 h-14 rounded-full bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+        <svg className="w-8 h-8 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="10" strokeOpacity="0.2" />
+          <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+        </svg>
       </div>
+      <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        Preparing your Google Flights search
+      </h1>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        {status}
+      </p>
+    </div>
+  );
+}
+
+export default function FlightLoadingPage() {
+  return (
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-indigo-100 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900">
+      <Suspense fallback={
+        <div className="text-center px-6 py-10 rounded-2xl bg-white/80 dark:bg-gray-900/80 shadow-xl border border-gray-200 dark:border-gray-800 max-w-md w-full">
+          <div className="mx-auto mb-6 w-14 h-14 rounded-full bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <svg className="w-8 h-8 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" strokeOpacity="0.2" />
+              <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Preparing your Google Flights search
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Finding the best flight...
+          </p>
+        </div>
+      }>
+        <FlightLoadingContent />
+      </Suspense>
     </main>
   );
 }
