@@ -11,7 +11,10 @@ Output: List of destinations ready for weather scoring
 import os
 import logging
 from datetime import datetime
-from serpapi import GoogleSearch
+try:
+    from serpapi import GoogleSearch
+except ImportError:
+    from serpapi.google_search import GoogleSearch
 
 # Load environment variables from .env file (for local development)
 try:

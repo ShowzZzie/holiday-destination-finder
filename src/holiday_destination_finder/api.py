@@ -424,7 +424,7 @@ def build_google_flights_url(origin: str, destination: str, departure_date: str,
 # Puppeteer code to extract the cheapest departure airport from Google Flights
 _BROWSERLESS_FUNCTION_CODE = '''
 export default async function ({ page, context }) {
-    const { url, timeout = 25000 } = context;
+    const { url, timeout = 25000, debug = false } = context;
 
     try {
         // Navigate to Google Flights
@@ -433,12 +433,61 @@ export default async function ({ page, context }) {
         // Wait for dynamic content to load - flight prices take time
         await new Promise(r => setTimeout(r, 5000));
 
-        // Look for the "cheaper from" suggestion notification or extract the displayed origin
-        const result = await page.evaluate(() => {
-            const bodyText = document.body.innerText;
+        // Try to bring "Top departing flights" into view to force render
+        await page.evaluate(() => {
+            const candidates = Array.from(document.querySelectorAll('div, span'));
+            const target = candidates.find(el => (el.textContent || '').includes('Top departing flights'));
+            if (target && target.scrollIntoView) {
+                target.scrollIntoView({ block: 'center' });
+            } else {
+                window.scrollTo(0, Math.floor(document.body.scrollHeight * 0.5));
+            }
+        });
 
-            // Strategy 1: Look for "cheaper from XXX" notification/banner
+        await new Promise(r => setTimeout(r, 2000));
+
+        // Look for the "Fly from" / "cheaper from" notification or extract the displayed origin
+        const result = await page.evaluate((destination) => {
+            const bodyText = document.body.innerText;
+            const dest = (destination || '').toUpperCase();
+
+            const collectCandidateTexts = () => {
+                const nodes = [
+                    ...document.querySelectorAll('[role="status"], [role="alert"], [aria-live], [role="tooltip"], [aria-label], [title]')
+                ];
+                return nodes
+                    .map(el => el.getAttribute('aria-label') || el.getAttribute('title') || el.textContent || '')
+                    .filter(Boolean);
+            };
+
+            // Strategy 1: Look for "Fly from XXX for €YY" notification/banner
             // This appears when Google suggests a cheaper departure airport
+            const notificationTextCandidates = collectCandidateTexts();
+            const notificationText = notificationTextCandidates.join(' ');
+
+            const flyFromPatterns = [
+                /Fly from\\s+([A-Z]{3})\\s+for\\s+([€$£]?\\s*\\d+|\\d+\\s*[€$£])/i,
+                /\\bfrom\\s+([A-Z]{3})\\s+for\\s+([€$£]?\\s*\\d+|\\d+\\s*[€$£])/i,
+            ];
+
+            for (const pattern of flyFromPatterns) {
+                const match = notificationText.match(pattern) || bodyText.match(pattern);
+                if (match) {
+                    return { airport: match[1], source: 'fly_from_notification' };
+                }
+            }
+
+            // Strategy 1b: Look for explicit data-iata-code on "Change airport" CTA
+            const changeAirportIata = document.querySelector('[data-is-origin="true"][data-iata-code]') ||
+                document.querySelector('[data-iata-code]');
+            if (changeAirportIata) {
+                const iata = changeAirportIata.getAttribute('data-iata-code');
+                if (iata && /^[A-Z]{3}$/.test(iata)) {
+                    return { airport: iata, source: 'change_airport_data' };
+                }
+            }
+
+            // Strategy 2: Look for "cheaper from XXX" notification/banner
             const cheaperPatterns = [
                 /(?:from|From)\\s+([A-Z]{3})\\s+(?:is|are|would be)\\s+cheaper/i,
                 /[Ff]lights?\\s+from\\s+([A-Z]{3})\\s+are\\s+[€$£]?\\d+\\s+cheaper/i,
@@ -453,7 +502,7 @@ export default async function ({ page, context }) {
                 }
             }
 
-            // Strategy 2: Look for the origin airport in the search form
+            // Strategy 3: Look for the origin airport in the search form
             // The input field shows the currently selected origin
             const originInputs = document.querySelectorAll('input[placeholder*="Where from"], input[aria-label*="Where from"], input[aria-label*="origin" i], input[aria-label*="departure" i]');
             for (const input of originInputs) {
@@ -464,27 +513,108 @@ export default async function ({ page, context }) {
                 }
             }
 
-            // Strategy 3: Look for departure airport in displayed flight cards
-            // Flight cards show "WAW – VLC" format
-            const flightRoutePattern = /\\b([A-Z]{3})\\s*[–—-]\\s*[A-Z]{3}\\b/g;
-            const routeMatches = [...bodyText.matchAll(flightRoutePattern)];
-            if (routeMatches.length > 0) {
-                // Return the first origin airport found
-                return { airport: routeMatches[0][1], source: 'flight_route' };
+            // Strategy 4: Look for departure airport in displayed flight cards
+            // Flight cards show "WAW – VLC" or "WAW-VLC" format
+            const flightRoutePattern = /\\b([A-Z]{3})\\s*[–—-]\\s*([A-Z]{3})\\b/;
+            const candidateTexts = collectCandidateTexts().concat([bodyText]);
+            const routeCandidates = [];
+            for (const text of candidateTexts) {
+                const match = text.match(flightRoutePattern);
+                if (match) {
+                    routeCandidates.push(match);
+                }
+            }
+            if (routeCandidates.length > 0) {
+                return { airport: routeCandidates[0][1], source: 'flight_route' };
             }
 
-            // Strategy 4: Find any Polish airport mentioned (fallback)
-            const polishAirports = ['KRK', 'WAW', 'WRO', 'GDN', 'POZ', 'KTW', 'WMI', 'RZE', 'SZZ', 'BZG', 'LCJ'];
-            for (const apt of polishAirports) {
-                // Look for airport code with word boundary
-                const regex = new RegExp('\\\\b' + apt + '\\\\b');
-                if (regex.test(bodyText)) {
-                    return { airport: apt, source: 'found_in_page' };
+            // Strategy 5: Look near "Change airport" tooltip text
+            const changeAirportNodes = Array.from(document.querySelectorAll('*'))
+                .filter(el => (el.textContent || '').includes('Change airport'))
+                .slice(0, 5);
+
+            for (const node of changeAirportNodes) {
+                const text = node.textContent || '';
+                const match = text.match(/\\bfrom\\s+([A-Z]{3})\\b/i);
+                if (match) {
+                    return { airport: match[1], source: 'change_airport_tooltip' };
+                }
+            }
+
+            // Strategy 6: Scan script payloads for origin/destination pairs
+            if (dest) {
+                const scriptTexts = Array.from(document.querySelectorAll('script'))
+                    .map(script => script.textContent || '')
+                    .filter(Boolean);
+                const pairPattern = new RegExp(`\\b([A-Z]{3})\\b[^A-Z]{0,40}\\b${dest}\\b`);
+                for (const text of scriptTexts) {
+                    const match = text.match(pairPattern);
+                    if (match) {
+                        return { airport: match[1], source: 'script_pair' };
+                    }
                 }
             }
 
             return null;
-        });
+        }, context.destination);
+
+        if (!result && debug) {
+            const debugInfo = await page.evaluate(() => {
+                const limitText = (text, max = 2000) => {
+                    if (!text) return text;
+                    return text.length > max ? text.slice(0, max) + '…' : text;
+                };
+
+                const candidates = Array.from(
+                    document.querySelectorAll('[role="status"], [role="alert"], [aria-live], [role="tooltip"], [aria-label], [title]')
+                )
+                    .map(el => el.getAttribute('aria-label') || el.getAttribute('title') || el.textContent || '')
+                    .filter(Boolean);
+
+                const interesting = candidates.filter(text =>
+                    /(Fly from|cheaper from|from\\s+[A-Z]{3}|Change airport)/i.test(text)
+                );
+
+                const dataIataElements = Array.from(document.querySelectorAll('[data-iata-code]'))
+                    .map(el => ({
+                        iata: el.getAttribute('data-iata-code'),
+                        is_origin: el.getAttribute('data-is-origin'),
+                        text: (el.textContent || '').trim()
+                    }))
+                    .slice(0, 10);
+
+                const originInputs = Array.from(
+                    document.querySelectorAll('input[placeholder*="Where from"], input[aria-label*="Where from"], input[aria-label*="origin" i], input[aria-label*="departure" i]')
+                )
+                    .map(input => input.value || input.textContent || '')
+                    .filter(Boolean);
+
+                const bodyText = document.body.innerText || '';
+                const routeMatches = [...bodyText.matchAll(/\\b([A-Z]{3})\\s*[–—-]\\s*[A-Z]{3}\\b/g)]
+                    .slice(0, 3)
+                    .map(match => match[0]);
+
+                const changeAirportNode = Array.from(document.querySelectorAll('*'))
+                    .find(el => (el.textContent || '').includes('Change airport'));
+
+                const topDepartingNode = Array.from(document.querySelectorAll('*'))
+                    .find(el => (el.textContent || '').includes('Top departing flights'));
+
+                return {
+                    candidate_snippets: interesting.slice(0, 8),
+                    data_iata_elements: dataIataElements,
+                    origin_inputs: originInputs.slice(0, 5),
+                    route_matches: routeMatches,
+                    change_airport_html: changeAirportNode ? limitText(changeAirportNode.outerHTML) : null,
+                    top_departing_html: topDepartingNode ? limitText(topDepartingNode.outerHTML) : null,
+                };
+            });
+
+            return {
+                data: { airport: null, error: 'No airport match found', debug: debugInfo },
+                type: 'application/json'
+            };
+        }
 
         if (result) {
             return { data: result, type: 'application/json' };
@@ -506,13 +636,14 @@ export default async function ({ page, context }) {
 '''
 
 
-def resolve_departure_airport(
+def resolve_departure_airport_detail(
     origin_kgmid: str,
     destination: str,
     departure_date: str,
     return_date: str,
-    timeout_ms: int = 20000
-) -> Optional[str]:
+    timeout_ms: int = 20000,
+    debug: bool = False
+) -> dict:
     """
     Use Browserless.io to render Google Flights and find the cheapest departure airport.
 
@@ -524,11 +655,11 @@ def resolve_departure_airport(
         timeout_ms: Timeout for the browser operation
 
     Returns:
-        IATA code of the cheapest departure airport, or None if not found
+        Dict with airport/source/debug info from Browserless.
     """
     if not _BROWSERLESS_API_KEY:
         logger.warning("[api] BROWSERLESS_API_KEY not configured")
-        return None
+        return {"airport": None, "error": "BROWSERLESS_API_KEY not configured"}
 
     # Build the Google Flights URL
     gf_url = build_google_flights_url(origin_kgmid, destination, departure_date, return_date)
@@ -540,45 +671,76 @@ def resolve_departure_airport(
         "code": _BROWSERLESS_FUNCTION_CODE,
         "context": {
             "url": gf_url,
-            "timeout": timeout_ms
+            "timeout": timeout_ms,
+            "debug": debug,
+            "destination": destination
         }
     }
 
     browserless_url = f"{_BROWSERLESS_ENDPOINT}?token={_BROWSERLESS_API_KEY}"
 
-    try:
-        req = urllib.request.Request(
-            browserless_url,
-            data=json.dumps(payload).encode('utf-8'),
-            headers={
-                'Content-Type': 'application/json'
-            },
-            method='POST'
-        )
-
-        with urllib.request.urlopen(req, timeout=30) as response:
-            result = json.loads(response.read().decode('utf-8'))
-
-            if isinstance(result, dict) and result.get('airport'):
-                airport = result['airport']
-                source = result.get('source', 'unknown')
-                logger.info(f"[api] Resolved departure airport: {airport} (source: {source})")
-                return airport
-            else:
-                logger.warning(f"[api] Could not resolve departure airport: {result}")
-                return None
-
-    except urllib.error.HTTPError as e:
-        logger.error(f"[api] Browserless.io HTTP error: {e.code} {e.reason}")
+    last_error = None
+    attempts = 2
+    for attempt in range(1, attempts + 1):
         try:
-            error_body = e.read().decode('utf-8')
-            logger.error(f"[api] Error details: {error_body[:500]}")
-        except:
-            pass
-        return None
-    except Exception as e:
-        logger.error(f"[api] Error calling Browserless.io: {e}")
-        return None
+            req = urllib.request.Request(
+                browserless_url,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={
+                    'Content-Type': 'application/json'
+                },
+                method='POST'
+            )
+
+            with urllib.request.urlopen(req, timeout=30) as response:
+                result = json.loads(response.read().decode('utf-8'))
+
+                if isinstance(result, dict):
+                    data = result.get("data") if "data" in result else result
+                    if isinstance(data, dict):
+                        if data.get("airport"):
+                            airport = data["airport"]
+                            source = data.get("source", "unknown")
+                            logger.info(f"[api] Resolved departure airport: {airport} (source: {source})")
+                            return data
+
+                        logger.warning(f"[api] Could not resolve departure airport: {data}")
+                        last_error = data
+                    else:
+                        last_error = {"airport": None, "error": "Unexpected data format from Browserless"}
+                else:
+                    last_error = {"airport": None, "error": "Unexpected response from Browserless"}
+
+        except urllib.error.HTTPError as e:
+            logger.error(f"[api] Browserless.io HTTP error: {e.code} {e.reason}")
+            try:
+                error_body = e.read().decode('utf-8')
+                logger.error(f"[api] Error details: {error_body[:500]}")
+            except Exception:
+                pass
+            last_error = {"airport": None, "error": f"Browserless.io HTTP error: {e.code} {e.reason}"}
+        except Exception as e:
+            logger.error(f"[api] Error calling Browserless.io: {e}")
+            last_error = {"airport": None, "error": f"Error calling Browserless.io: {e}"}
+
+        if attempt < attempts:
+            time.sleep(1.5)
+
+    return last_error or {"airport": None, "error": "Unknown Browserless error"}
+
+
+def resolve_departure_airport(
+    origin_kgmid: str,
+    destination: str,
+    departure_date: str,
+    return_date: str,
+    timeout_ms: int = 20000
+) -> Optional[str]:
+    """Return only the resolved airport code or None."""
+    detail = resolve_departure_airport_detail(
+        origin_kgmid, destination, departure_date, return_date, timeout_ms=timeout_ms
+    )
+    return detail.get("airport")
 
 
 @app.get("/resolve-departure", dependencies=[Depends(authenticated_endpoint)])
@@ -586,7 +748,8 @@ def resolve_departure(
     origin: str = Query(..., description="Origin kgmid (e.g., /m/05qhw for Poland)"),
     destination: str = Query(..., description="Destination IATA code (e.g., VLC)"),
     departure: str = Query(..., description="Departure date (YYYY-MM-DD)"),
-    return_date: str = Query(..., alias="return", description="Return date (YYYY-MM-DD)")
+    return_date: str = Query(..., alias="return", description="Return date (YYYY-MM-DD)"),
+    debug: bool = Query(False, description="Include debug info from Browserless")
 ):
     """
     Resolve the cheapest departure airport when searching from a country/city umbrella.
@@ -616,9 +779,63 @@ def resolve_departure(
         raise HTTPException(status_code=422, detail="Return date must be after departure date")
 
     # Call Browserless.io to resolve
-    airport = resolve_departure_airport(origin, destination, departure, return_date)
+    detail = resolve_departure_airport_detail(
+        origin, destination, departure, return_date, debug=debug
+    )
 
-    if airport:
-        return {"airport": airport, "source": "browserless"}
+    if detail.get("airport"):
+        return {"airport": detail["airport"], "source": detail.get("source", "browserless"), "debug": detail.get("debug")}
     else:
-        return {"airport": None, "error": "Could not resolve departure airport"}
+        return {"airport": None, "error": detail.get("error", "Could not resolve departure airport"), "debug": detail.get("debug")}
+
+
+@app.get("/google-flights-url", dependencies=[Depends(authenticated_endpoint)])
+def google_flights_url(
+    origin: str = Query(..., description="Origin kgmid or IATA code (e.g., /m/05qhw or WAW)"),
+    destination: str = Query(..., description="Destination IATA code (e.g., VLC)"),
+    departure: str = Query(..., description="Departure date (YYYY-MM-DD)"),
+    return_date: str = Query(..., alias="return", description="Return date (YYYY-MM-DD)"),
+    resolve: bool = Query(True, description="Resolve cheapest origin airport when using kgmid"),
+    debug: bool = Query(False, description="Include debug info from Browserless")
+):
+    """
+    Build a Google Flights URL, optionally resolving the cheapest origin airport.
+    """
+    origin = _validate_origin(origin)
+
+    destination = destination.upper()
+    if not _IATA_PATTERN.match(destination):
+        raise HTTPException(status_code=422, detail="Destination must be a 3-letter IATA code")
+
+    # Validate dates
+    try:
+        dep_date = date.fromisoformat(departure)
+        ret_date = date.fromisoformat(return_date)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Dates must be in YYYY-MM-DD format")
+
+    if ret_date <= dep_date:
+        raise HTTPException(status_code=422, detail="Return date must be after departure date")
+
+    resolved_airport = None
+    debug_info = None
+    source = "direct"
+    origin_for_url = origin
+
+    if resolve and origin.startswith('/'):
+        detail = resolve_departure_airport_detail(origin, destination, departure, return_date, debug=debug)
+        resolved_airport = detail.get("airport")
+        debug_info = detail.get("debug")
+        if resolved_airport:
+            origin_for_url = resolved_airport
+            source = detail.get("source", "browserless")
+
+    url = build_google_flights_url(origin_for_url, destination, departure, return_date)
+
+    return {
+        "url": url,
+        "origin": origin_for_url,
+        "source": source,
+        "resolved_airport": resolved_airport,
+        "debug": debug_info
+    }

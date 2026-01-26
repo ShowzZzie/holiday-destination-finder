@@ -128,6 +128,14 @@ export interface ResolveDepartureResponse {
   error?: string;
 }
 
+export interface GoogleFlightsUrlResponse {
+  url: string | null;
+  origin?: string;
+  source?: string;
+  resolved_airport?: string | null;
+  error?: string;
+}
+
 /**
  * Resolve the cheapest departure airport when searching from a country/city umbrella.
  * Uses headless browser to load Google Flights and extract the suggested cheaper airport.
@@ -152,6 +160,36 @@ export async function resolveDepartureAirport(
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Failed to resolve departure airport: ${error}`);
+  }
+
+  return response.json();
+}
+
+export async function getGoogleFlightsUrl(params: {
+  origin: string;
+  destination: string;
+  departure: string;
+  returnDate: string;
+  resolve?: boolean;
+}): Promise<GoogleFlightsUrlResponse> {
+  const searchParams = new URLSearchParams({
+    origin: params.origin,
+    destination: params.destination,
+    departure: params.departure,
+    return: params.returnDate,
+  });
+
+  if (params.resolve !== undefined) {
+    searchParams.set('resolve', params.resolve ? 'true' : 'false');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/google-flights-url?${searchParams.toString()}`, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to get Google Flights URL: ${error}`);
   }
 
   return response.json();
