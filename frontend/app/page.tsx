@@ -824,6 +824,7 @@ export default function Home() {
 
   // Auto-select providers based on date range when not in debug mode
   // SerpAPI only works for ~5 months ahead, use Ryanair/Wizzair for extended dates
+  // Backend now supports kgmid (country/city) origins with ryanair/wizzair by expanding to airports
   useEffect(() => {
     if (isDebugMode) return; // Don't auto-change in debug mode
 
@@ -831,16 +832,9 @@ export default function Home() {
     const newProviders = isExtended ? ['ryanair', 'wizzair'] : ['serpapi'];
 
     // Only update if providers actually changed
+    // Don't clear origin - backend handles kgmid expansion automatically
     if (JSON.stringify(formData.providers) !== JSON.stringify(newProviders)) {
-      const originIsKgmid = formData.origin.startsWith('/');
-      // If switching to extended mode and origin is a kgmid (city/country), clear it
-      // because ryanair/wizzair only work with specific airport IATA codes
-      if (isExtended && originIsKgmid) {
-        setOriginInput('');
-        setFormData(prev => ({ ...prev, providers: newProviders, origin: '' }));
-      } else {
-        setFormData(prev => ({ ...prev, providers: newProviders }));
-      }
+      setFormData(prev => ({ ...prev, providers: newProviders }));
     }
   }, [formData.end, isDebugMode]);
 
