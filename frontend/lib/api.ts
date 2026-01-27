@@ -1,5 +1,7 @@
 // API client for Holiday Destination Finder backend
 
+import { getClientId } from './client-id';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://holiday-destination-finder.onrender.com';
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';
 
@@ -8,6 +10,16 @@ function getAuthHeaders(): HeadersInit {
   const headers: HeadersInit = {};
   if (API_KEY) {
     headers['X-API-Key'] = API_KEY;
+  }
+  // Add client ID header for user identification
+  try {
+    const clientId = getClientId();
+    if (clientId && clientId !== 'server-side') {
+      headers['X-Client-ID'] = clientId;
+    }
+  } catch (e) {
+    // Silently fail if client ID can't be retrieved
+    console.warn('Failed to get client ID:', e);
   }
   return headers;
 }
@@ -57,6 +69,15 @@ export interface JobStatus {
     results?: SearchResult[];
   };
   error?: string;
+  custom_name?: string;  // User-defined custom name
+  params?: {
+    origin?: string;
+    start?: string;
+    end?: string;
+    trip_length?: number;
+    providers?: string[];
+    top_n?: number;
+  };
 }
 
 export async function startSearch(params: SearchParams): Promise<JobResponse> {
@@ -193,4 +214,116 @@ export async function getGoogleFlightsUrl(params: {
   }
 
   return response.json();
+}
+
+/**
+ * Get searches for the current user from Supabase.
+ * 
+ * @param type - 'personal' for user's own searches, 'shared' for saved searches
+ * @returns List of job statuses
+ */
+export async function getMySearches(type: 'personal' | 'shared' = 'personal'): Promise<JobStatus[]> {
+  const params = new URLSearchParams({
+    type,
+  });
+
+  const response = await fetch(`${API_BASE_URL}/jobs?${params.toString()}`, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to get searches: ${error}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Save a shared search to user's saved list.
+ * 
+ * @param jobId - Job ID to save
+ */
+export async function saveSearch(jobId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/save`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to save search: ${error}`);
+  }
+}
+
+/**
+ * Remove a search from user's saved list.
+ * 
+ * @param jobId - Job ID to unsave
+ */
+export async function unsaveSearch(jobId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/unsave`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to unsave search: ${error}`);
+  }
+}
+
+/**
+ * Check if a search is saved by the current user.
+ * 
+ * @param jobId - Job ID to check
+ * @returns True if saved, false otherwise
+ */
+export async function isSearchSaved(jobId: string): Promise<boolean> {
+  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/saved`, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    // If endpoint fails, assume not saved
+    return false;
+  }
+
+  const data = await response.json();
+  return data.saved === true;
+}
+
+/**
+ * Rename a search (only works for searches created by the current user).
+ * 
+ * @param jobId - Job ID to rename
+ * @param customName - New custom name (null to remove custom name and use default)
+ */
+export async function renameSearch(jobId: string, customName: string | null): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/name`, {
+    method: 'PUT',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ custom_name: customName }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to rename search: ${error}`);
+  }
+}
+
+/**
+ * Get shareable URL for a job.
+ * 
+ * @param jobId - Job ID
+ * @returns Shareable URL
+ */
+export function getShareableJobUrl(jobId: string): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+  return `${window.location.origin}/?jobId=${jobId}`;
 }

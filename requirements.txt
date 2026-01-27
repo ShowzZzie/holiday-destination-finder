@@ -9,5 +9,6 @@ redis>=5.0.0
 python-dotenv
 google-search-results
 serpapi
+supabase>=2.0.0
 
 -e .

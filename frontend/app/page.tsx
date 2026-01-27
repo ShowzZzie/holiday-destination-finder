@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
-import { startSearch, getJobStatus, checkHealth, cancelJob, SearchParams, JobStatus, SearchResult } from '@/lib/api';
+import { startSearch, getJobStatus, checkHealth, cancelJob, SearchParams, JobStatus, SearchResult, getMySearches, saveSearch, unsaveSearch, isSearchSaved, renameSearch, getShareableJobUrl } from '@/lib/api';
 import { COUNTRIES, Country, Airport as AirportData } from '@/lib/airports';
 
 // City grouping for autocomplete
@@ -237,11 +237,14 @@ export default function Home() {
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isApiHealthy, setIsApiHealthy] = useState<boolean | null>(null);
-  const [jobHistory, setJobHistory] = useState<Array<{ jobId: string; origin: string; start: string; end: string; trip_length?: number; providers?: string[]; top_n?: number }>>([]);
+  const [jobHistory, setJobHistory] = useState<Array<{ jobId: string; origin: string; start: string; end: string; trip_length?: number; providers?: string[]; top_n?: number; custom_name?: string }>>([]);
   const [validJobIds, setValidJobIds] = useState<Set<string>>(new Set());
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [recentlyCreatedJobIds, setRecentlyCreatedJobIds] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<'personal' | 'shared'>('personal');
+  const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
   // Track the last viewed job's form parameters
   const [lastViewedParams, setLastViewedParams] = useState<SearchParams | null>(null);
   // Local state for number inputs to allow empty values during typing
@@ -517,20 +520,63 @@ export default function Home() {
     checkHealth().then(setIsApiHealthy);
   }, []);
 
-  // Load job history from localStorage on mount
+  // Load job history from Supabase on mount and when tab changes
   useEffect(() => {
-    const saved = localStorage.getItem('jobHistory');
-    if (saved) {
+    const loadJobs = async () => {
       try {
-        const history = JSON.parse(saved);
+        const jobs = await getMySearches(activeTab);
+        // Convert to jobHistory format
+        const history = jobs.map(job => ({
+          jobId: job.job_id,
+          origin: job.params?.origin || 'N/A',
+          start: job.params?.start || 'N/A',
+          end: job.params?.end || 'N/A',
+          trip_length: job.params?.trip_length,
+          providers: job.params?.providers,
+          top_n: job.params?.top_n,
+          custom_name: job.custom_name,
+        }));
         setJobHistory(history);
-        // Validate all jobs on mount
-        validateJobs(history);
+        // Mark all jobs as valid (they're from Supabase)
+        setValidJobIds(new Set(history.map(j => j.jobId)));
       } catch (e) {
-        console.error('Failed to parse job history:', e);
+        console.error('Failed to load jobs from Supabase:', e);
+        // Fallback to localStorage if Supabase fails
+        const saved = localStorage.getItem('jobHistory');
+        if (saved) {
+          try {
+            const history = JSON.parse(saved);
+            setJobHistory(history);
+            validateJobs(history);
+          } catch (err) {
+            console.error('Failed to parse job history:', err);
+          }
+        }
       }
+    };
+    loadJobs();
+  }, [activeTab]);
+
+  // Handle jobId query parameter (for shared links)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const params = new URLSearchParams(window.location.search);
+    const jobIdParam = params.get('jobId');
+    
+    if (jobIdParam && jobIdParam !== selectedJobId) {
+      // Load the shared job
+      handleJobSelect(jobIdParam);
+      // Check if it's saved
+      isSearchSaved(jobIdParam).then(saved => {
+        if (saved) {
+          setSavedJobIds(prev => new Set([...prev, jobIdParam]));
+        }
+      }).catch(() => {});
+      // Clean up URL (optional)
+      window.history.replaceState({}, '', window.location.pathname);
     }
-  }, []);
+  }, []); // Only run on mount
 
   // Validate jobs by checking if they exist
   const validateJobs = async (jobs: Array<{ jobId: string; origin: string; start: string; end: string }>) => {
@@ -712,6 +758,36 @@ export default function Home() {
     }
   };
 
+  const handleSaveSearch = async (jobId: string) => {
+    setIsSaving(true);
+    try {
+      await saveSearch(jobId);
+      setSavedJobIds(prev => new Set([...prev, jobId]));
+    } catch (err) {
+      console.error('Failed to save search:', err);
+      alert('Failed to save search');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUnsaveSearch = async (jobId: string) => {
+    setIsSaving(true);
+    try {
+      await unsaveSearch(jobId);
+      setSavedJobIds(prev => {
+        const updated = new Set(prev);
+        updated.delete(jobId);
+        return updated;
+      });
+    } catch (err) {
+      console.error('Failed to unsave search:', err);
+      alert('Failed to unsave search');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleJobSelect = async (jobId: string) => {
     setSelectedJobId(jobId);
     setError(null);
@@ -741,6 +817,11 @@ export default function Home() {
       setIsSearching(status.status === 'queued' || status.status === 'running');
       // Ensure job is marked as valid
       setValidJobIds(prev => new Set([...prev, jobId]));
+      // Check if saved
+      const saved = await isSearchSaved(jobId);
+      if (saved) {
+        setSavedJobIds(prev => new Set([...prev, jobId]));
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load job status';
       // If job not found, remove from valid set and update history
@@ -767,8 +848,9 @@ export default function Home() {
     }
   };
 
-  const handleJobReorder = (newOrder: Array<{ jobId: string; origin: string; start: string; end: string; trip_length?: number; providers?: string[]; top_n?: number }>) => {
+  const handleJobReorder = (newOrder: Array<{ jobId: string; origin: string; start: string; end: string; trip_length?: number; providers?: string[]; top_n?: number; custom_name?: string }>) => {
     setJobHistory(newOrder);
+    // Note: Reordering is now handled by Supabase, but we keep localStorage as backup
     localStorage.setItem('jobHistory', JSON.stringify(newOrder));
   };
 
@@ -866,6 +948,9 @@ export default function Home() {
         jobHistory={jobHistory}
         validJobIds={validJobIds}
         selectedJobId={selectedJobId}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        savedJobIds={savedJobIds}
         onJobSelect={handleJobSelect}
         onReorder={handleJobReorder}
         onNewSearch={handleNewSearch}
@@ -1207,10 +1292,40 @@ export default function Home() {
         )}
 
         {jobStatus?.status === 'done' && jobStatus.payload?.results && (
-          <ResultsDisplay
-            results={jobStatus.payload.results}
-            searchOrigin={jobStatus.payload.meta?.origin || formData.origin}
-          />
+          <>
+            {/* Add to Shared button */}
+            {selectedJobId && (
+              <div className="mb-4 flex justify-center">
+                {savedJobIds.has(selectedJobId) ? (
+                  <button
+                    onClick={() => handleUnsaveSearch(selectedJobId)}
+                    disabled={isSaving}
+                    className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Added to Shared
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleSaveSearch(selectedJobId)}
+                    disabled={isSaving}
+                    className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    {isSaving ? 'Saving...' : 'Add to Shared'}
+                  </button>
+                )}
+              </div>
+            )}
+            <ResultsDisplay
+              results={jobStatus.payload.results}
+              searchOrigin={jobStatus.payload.meta?.origin || formData.origin}
+            />
+          </>
         )}
         
         {jobStatus?.status === 'done' && jobStatus.payload && !jobStatus.payload.results && (
@@ -1308,17 +1423,23 @@ function JobHistorySidebar({
   jobHistory,
   validJobIds,
   selectedJobId,
+  activeTab,
+  onTabChange,
+  savedJobIds,
   onJobSelect,
   onReorder,
   onNewSearch,
   open,
   onToggle
 }: {
-  jobHistory: Array<{ jobId: string; origin: string; start: string; end: string; trip_length?: number; providers?: string[]; top_n?: number }>;
+  jobHistory: Array<{ jobId: string; origin: string; start: string; end: string; trip_length?: number; providers?: string[]; top_n?: number; custom_name?: string }>;
   validJobIds: Set<string>;
   selectedJobId: string | null;
+  activeTab: 'personal' | 'shared';
+  onTabChange: (tab: 'personal' | 'shared') => void;
+  savedJobIds: Set<string>;
   onJobSelect: (jobId: string) => void;
-  onReorder: (newOrder: Array<{ jobId: string; origin: string; start: string; end: string; trip_length?: number; providers?: string[]; top_n?: number }>) => void;
+  onReorder: (newOrder: Array<{ jobId: string; origin: string; start: string; end: string; trip_length?: number; providers?: string[]; top_n?: number; custom_name?: string }>) => void;
   onNewSearch: () => void;
   open: boolean;
   onToggle: () => void;
@@ -1326,9 +1447,54 @@ function JobHistorySidebar({
   const { t } = useLanguage();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [renamingJobId, setRenamingJobId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState<string>('');
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
 
   // Filter to only show valid jobs
   const validJobs = jobHistory.filter(job => validJobIds.has(job.jobId));
+
+  const handleShare = async (jobId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = getShareableJobUrl(jobId);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopySuccess(jobId);
+      setTimeout(() => setCopySuccess(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleRenameStart = (job: typeof jobHistory[0], e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenamingJobId(job.jobId);
+    setRenameValue(job.custom_name || '');
+  };
+
+  const handleRenameSave = async (jobId: string) => {
+    try {
+      await renameSearch(jobId, renameValue.trim() || null);
+      setRenamingJobId(null);
+      // Reload jobs to get updated name
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to rename:', err);
+      alert('Failed to rename search');
+    }
+  };
+
+  const handleRenameCancel = () => {
+    setRenamingJobId(null);
+    setRenameValue('');
+  };
+
+  const getJobDisplayName = (job: typeof jobHistory[0]): string => {
+    if (job.custom_name) {
+      return job.custom_name;
+    }
+    return `${getOriginDisplayName(job.origin)} · ${formatDate(job.start)} · ${formatDate(job.end)}`;
+  };
 
   const formatDate = (dateStr: string) => {
     if (!dateStr || dateStr === 'N/A') return dateStr;
@@ -1425,45 +1591,119 @@ function JobHistorySidebar({
             {t('newSearch')}
           </button>
         </div>
-        <div className="flex flex-col h-[calc(100vh-8.5rem)]">
+        {/* Tabs */}
+        <div className="border-b border-gray-200 dark:border-gray-700 flex">
+          <button
+            onClick={() => onTabChange('personal')}
+            className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+              activeTab === 'personal'
+                ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Personal
+          </button>
+          <button
+            onClick={() => onTabChange('shared')}
+            className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+              activeTab === 'shared'
+                ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Shared
+          </button>
+        </div>
+        <div className="flex flex-col h-[calc(100vh-12rem)]">
           <div className="overflow-y-auto flex-1 p-4">
             {validJobs.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
-                No job history yet
+                {activeTab === 'personal' ? 'No searches yet' : 'No saved searches yet'}
               </p>
             ) : (
               <div className="space-y-2">
                 {validJobs.map((job, index) => (
                   <div
                     key={job.jobId}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, index)}
-                    onDragOver={(e) => handleDragOver(e, index)}
+                    draggable={activeTab === 'personal'}
+                    onDragStart={(e) => activeTab === 'personal' && handleDragStart(e, index)}
+                    onDragOver={(e) => activeTab === 'personal' && handleDragOver(e, index)}
                     onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDropForValidJobs(e, index)}
+                    onDrop={(e) => activeTab === 'personal' && handleDropForValidJobs(e, index)}
                     onDragEnd={handleDragEnd}
-                    className={`cursor-move ${
+                    className={`${activeTab === 'personal' ? 'cursor-move' : ''} ${
                       draggedIndex === index ? 'opacity-50' : ''
                     } ${dragOverIndex === index ? 'border-t-2 border-indigo-500' : ''}`}
                   >
-                    <button
-                      onClick={() => onJobSelect(job.jobId)}
-                      className={`w-full text-left p-3 rounded-lg border transition-colors cursor-pointer ${
+                    <div
+                      className={`w-full text-left p-3 rounded-lg border transition-colors ${
                         selectedJobId === job.jobId
                           ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200'
                           : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >
-                      <div className="flex items-center gap-2 mb-1">
-                        <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                        <div className="text-sm font-medium truncate">
-                          {getOriginDisplayName(job.origin)} · {formatDate(job.start)} · {formatDate(job.end)}
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <button
+                          onClick={() => onJobSelect(job.jobId)}
+                          className="flex-1 text-left"
+                        >
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                            <div className="text-sm font-medium truncate">
+                              {renamingJobId === job.jobId ? (
+                                <input
+                                  type="text"
+                                  value={renameValue}
+                                  onChange={(e) => setRenameValue(e.target.value)}
+                                  onBlur={() => handleRenameSave(job.jobId)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleRenameSave(job.jobId);
+                                    if (e.key === 'Escape') handleRenameCancel();
+                                  }}
+                                  className="w-full px-2 py-1 text-sm border rounded dark:bg-gray-800 dark:border-gray-600"
+                                  autoFocus
+                                />
+                              ) : (
+                                getJobDisplayName(job)
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-xs font-mono text-gray-500 dark:text-gray-400 truncate mt-1">{job.jobId}</div>
+                        </button>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {activeTab === 'personal' && renamingJobId !== job.jobId && (
+                            <>
+                              <button
+                                onClick={(e) => handleRenameStart(job, e)}
+                                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                title="Rename"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={(e) => handleShare(job.jobId, e)}
+                                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                title={copySuccess === job.jobId ? 'Copied!' : 'Share'}
+                              >
+                                {copySuccess === job.jobId ? (
+                                  <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                                  </svg>
+                                )}
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
-                      <div className="text-xs font-mono text-gray-500 dark:text-gray-400 truncate">{job.jobId}</div>
-                    </button>
+                    </div>
                   </div>
                 ))}
               </div>
