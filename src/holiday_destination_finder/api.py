@@ -145,12 +145,12 @@ async def authenticated_endpoint(
     pass
 
 
-def _get_client_id(x_client_id: Optional[str] = Header(None, alias="X-Client-ID")) -> Optional[str]:
+def _get_client_id(request: Request) -> Optional[str]:
     """
     Extract client_id from header. Returns None if not provided.
     Client ID is optional - if not provided, some features won't work (like Personal/Shared tabs).
     """
-    return x_client_id
+    return request.headers.get("X-Client-ID")
 
 class SearchResult(BaseModel):
     city: str
@@ -273,13 +273,13 @@ def _validate_top_n(top_n: int) -> int:
 # Start a job (return immediately) - rate limited
 @app.get("/search", status_code=202, dependencies=[Depends(search_endpoint)])
 def search(
+    request: Request,
     origin: str = Query("WRO"),
     start: date = Query(...),
     end: date = Query(...),
     trip_length: int = Query(7),
     providers: List[str] = Query(["ryanair", "wizzair"]),
     top_n: int = Query(10),
-    client_id: Optional[str] = Depends(_get_client_id),
 ):
     providers = _validate_providers(providers)
     # Validate all inputs
@@ -298,7 +298,7 @@ def search(
     }
 
     # Get client_id from header (optional)
-    client_id = _get_client_id()
+    client_id = _get_client_id(request)
     
     logger.info(f"[api] Creating search job: origin={origin}, {start} to {end}, trip_length={trip_length}, providers={providers}, client_id={client_id}")
     job_id = enqueue(params, client_id=client_id)
@@ -381,13 +381,14 @@ def cancel(job_id: str):
 
 @app.get("/jobs", dependencies=[Depends(authenticated_endpoint)])
 def get_jobs(
-    client_id: Optional[str] = Depends(_get_client_id),
+    request: Request,
     type: str = Query("personal", description="Type of jobs to fetch: 'personal' or 'shared'")
 ):
     """
     Get jobs for a client_id from Supabase.
     This endpoint queries Supabase ONLY (not Redis) for sidebar persistence.
     """
+    client_id = _get_client_id(request)
     if not client_id:
         return []
     
@@ -424,10 +425,11 @@ def get_jobs(
 
 @app.post("/jobs/{job_id}/save", dependencies=[Depends(authenticated_endpoint)])
 def save_job(
-    job_id: str,
-    client_id: Optional[str] = Depends(_get_client_id)
+    request: Request,
+    job_id: str
 ):
     """Save a shared search to user's saved list."""
+    client_id = _get_client_id(request)
     if not client_id:
         raise HTTPException(status_code=400, detail="X-Client-ID header is required")
     
@@ -443,10 +445,11 @@ def save_job(
 
 @app.post("/jobs/{job_id}/unsave", dependencies=[Depends(authenticated_endpoint)])
 def unsave_job(
-    job_id: str,
-    client_id: Optional[str] = Depends(_get_client_id)
+    request: Request,
+    job_id: str
 ):
     """Remove a search from user's saved list."""
+    client_id = _get_client_id(request)
     if not client_id:
         raise HTTPException(status_code=400, detail="X-Client-ID header is required")
     
@@ -462,10 +465,11 @@ def unsave_job(
 
 @app.get("/jobs/{job_id}/saved", dependencies=[Depends(authenticated_endpoint)])
 def check_saved(
-    job_id: str,
-    client_id: Optional[str] = Depends(_get_client_id)
+    request: Request,
+    job_id: str
 ):
     """Check if a search is saved by the current user."""
+    client_id = _get_client_id(request)
     if not client_id:
         return {"saved": False}
     
@@ -482,22 +486,23 @@ class RenameRequest(BaseModel):
 
 @app.put("/jobs/{job_id}/name", dependencies=[Depends(authenticated_endpoint)])
 def rename_job(
+    request: Request,
     job_id: str,
-    request: RenameRequest,
-    client_id: Optional[str] = Depends(_get_client_id)
+    rename_request: RenameRequest
 ):
     """Rename a search (only if client_id matches the search's creator)."""
+    client_id = _get_client_id(request)
     if not client_id:
         raise HTTPException(status_code=400, detail="X-Client-ID header is required")
     
     if not update_search_name:
         raise HTTPException(status_code=503, detail="Supabase is not configured")
     
-    success = update_search_name(job_id, client_id, request.custom_name)
+    success = update_search_name(job_id, client_id, rename_request.custom_name)
     if not success:
         raise HTTPException(status_code=403, detail="You can only rename your own searches")
     
-    return {"status": "updated", "job_id": job_id, "custom_name": request.custom_name}
+    return {"status": "updated", "job_id": job_id, "custom_name": rename_request.custom_name}
 
 
 # ============================================================================
