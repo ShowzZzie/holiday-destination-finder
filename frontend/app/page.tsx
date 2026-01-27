@@ -247,6 +247,7 @@ export default function Home() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [userOwnedJobIds, setUserOwnedJobIds] = useState<Set<string>>(new Set()); // Track jobs owned by current user
+  const [justAddedJobId, setJustAddedJobId] = useState<string | null>(null); // Track job just added to show "Added to Shared" temporarily
   // Cache for both tabs to avoid loading flash
   const [personalJobsCache, setPersonalJobsCache] = useState<Array<{ jobId: string; origin: string; start: string; end: string; trip_length?: number; providers?: string[]; top_n?: number; custom_name?: string }>>([]);
   const [sharedJobsCache, setSharedJobsCache] = useState<Array<{ jobId: string; origin: string; start: string; end: string; trip_length?: number; providers?: string[]; top_n?: number; custom_name?: string }>>([]);
@@ -594,7 +595,7 @@ export default function Home() {
       setJobHistory(sharedJobsCache);
     }
     
-    // Refresh in background (optional, for new data)
+    // Refresh in background; for Personal tab, preserve in-progress jobs not yet in Supabase
     const refreshTab = async () => {
       try {
         const jobs = await getMySearches(activeTab);
@@ -608,22 +609,32 @@ export default function Home() {
           top_n: job.params?.top_n,
           custom_name: job.custom_name,
         }));
+        const fromServerIds = new Set(history.map(j => j.jobId));
         
         if (activeTab === 'personal') {
-          setPersonalJobsCache(history);
-          setUserOwnedJobIds(new Set(history.map((j: typeof history[0]) => j.jobId)));
+          setPersonalJobsCache(prev => {
+            const inProgress = prev.filter(j => recentlyCreatedJobIds.has(j.jobId) && !fromServerIds.has(j.jobId));
+            return [...inProgress, ...history];
+          });
+          setUserOwnedJobIds(new Set([...history.map((j: { jobId: string }) => j.jobId), ...recentlyCreatedJobIds]));
         } else {
           setSharedJobsCache(history);
         }
         
-        setJobHistory(history);
-        setValidJobIds(new Set(history.map(j => j.jobId)));
+        setJobHistory(prev => {
+          if (activeTab === 'personal') {
+            const inProgress = prev.filter(j => recentlyCreatedJobIds.has(j.jobId) && !fromServerIds.has(j.jobId));
+            return [...inProgress, ...history];
+          }
+          return history;
+        });
+        setValidJobIds(new Set([...history.map(j => j.jobId), ...recentlyCreatedJobIds]));
       } catch (e) {
         console.error(`Failed to refresh ${activeTab} tab:`, e);
       }
     };
     refreshTab();
-  }, [activeTab]);
+  }, [activeTab, recentlyCreatedJobIds]);
 
   // Handle jobId query parameter (for shared links)
   useEffect(() => {
@@ -733,6 +744,21 @@ export default function Home() {
     }
   }, [jobStatus?.job_id, jobStatus?.payload?.meta, formData, recentlyCreatedJobIds]);
 
+  // When a user-created job completes with no results or fails, remove it from Personal history (not persisted to Supabase)
+  useEffect(() => {
+    if (!jobStatus?.job_id || !recentlyCreatedJobIds.has(jobStatus.job_id)) return;
+    const noResults = jobStatus.status === 'done' && (!jobStatus.payload?.results || jobStatus.payload.results.length === 0);
+    const failed = jobStatus.status === 'failed';
+    if (!noResults && !failed) return;
+    const jobId = jobStatus.job_id;
+    setPersonalJobsCache(prev => prev.filter(j => j.jobId !== jobId));
+    setJobHistory(prev => prev.filter(j => j.jobId !== jobId));
+    setValidJobIds(prev => { const s = new Set(prev); s.delete(jobId); return s; });
+    setUserOwnedJobIds(prev => { const s = new Set(prev); s.delete(jobId); return s; });
+    setRecentlyCreatedJobIds(prev => { const s = new Set(prev); s.delete(jobId); return s; });
+    if (selectedJobId === jobId) setSelectedJobId(null);
+  }, [jobStatus?.job_id, jobStatus?.status, jobStatus?.payload?.results, recentlyCreatedJobIds, selectedJobId]);
+
   // Poll job status when job is active
   useEffect(() => {
     if (!jobStatus || !isSearching) return;
@@ -788,28 +814,20 @@ export default function Home() {
       // Mark this as a newly created job
       setRecentlyCreatedJobIds(prev => new Set([...prev, response.job_id]));
       
-      // Save to history immediately with form data
-      setJobHistory(prev => {
-        const newEntry = {
-          jobId: response.job_id,
-          origin: formData.origin,
-          start: formData.start,
-          end: formData.end,
-          trip_length: formData.trip_length,
-          providers: formData.providers,
-          top_n: formData.top_n,
-        };
-        const updated = [
-          newEntry,
-          ...prev.filter(item => item.jobId !== response.job_id)
-        ].slice(0, 20); // Keep last 20
-        localStorage.setItem('jobHistory', JSON.stringify(updated));
-        // Mark this job as valid
-        setValidJobIds(prev => new Set([...prev, response.job_id]));
-        // Mark as user-owned (created by current user)
-        setUserOwnedJobIds(prev => new Set([...prev, response.job_id]));
-        return updated;
-      });
+      const newEntry = {
+        jobId: response.job_id,
+        origin: formData.origin,
+        start: formData.start,
+        end: formData.end,
+        trip_length: formData.trip_length,
+        providers: formData.providers,
+        top_n: formData.top_n,
+      };
+      // New searches always go to Personal tab and show in history immediately
+      setPersonalJobsCache(prev => [newEntry, ...prev.filter(item => item.jobId !== response.job_id)].slice(0, 20));
+      setActiveTab('personal');
+      setValidJobIds(prev => new Set([...prev, response.job_id]));
+      setUserOwnedJobIds(prev => new Set([...prev, response.job_id]));
 
       // Track as last viewed params
       setLastViewedParams(formData);
@@ -833,6 +851,7 @@ export default function Home() {
     try {
       await saveSearch(jobId);
       setSavedJobIds(prev => new Set([...prev, jobId]));
+      setJustAddedJobId(jobId); // Mark as just added to show "Added to Shared" temporarily
     } catch (err) {
       console.error('Failed to save search:', err);
       alert('Failed to save search');
@@ -859,6 +878,10 @@ export default function Home() {
   };
 
   const handleJobSelect = async (jobId: string) => {
+    // Clear "just added" state when switching to a different job
+    if (justAddedJobId && justAddedJobId !== jobId) {
+      setJustAddedJobId(null);
+    }
     setSelectedJobId(jobId);
     setError(null);
 
@@ -930,8 +953,9 @@ export default function Home() {
   };
 
   const handleNewSearch = () => {
-    // Clear current job selection
+    // Clear current job selection and "just added" state so Add to Shared doesn't show when returning
     setSelectedJobId(null);
+    setJustAddedJobId(null);
     setJobStatus(null);
     setError(null);
     setIsSearching(false);
@@ -1389,14 +1413,13 @@ export default function Home() {
 
         {jobStatus?.status === 'done' && jobStatus.payload?.results && (
           <>
-            {/* Add to Shared button - only show for shared jobs (not owned by user) */}
-            {selectedJobId && !userOwnedJobIds.has(selectedJobId) && (
+            {/* Add to Shared - show "Add" when unsaved; show "Added" only while still viewing that query (justAddedJobId). Hide entirely when navigating away or when already saved from a prior visit. */}
+            {selectedJobId && !userOwnedJobIds.has(selectedJobId) && (!savedJobIds.has(selectedJobId) || justAddedJobId === selectedJobId) && (
               <div className="mb-4 flex justify-center">
-                {savedJobIds.has(selectedJobId) ? (
+                {justAddedJobId === selectedJobId ? (
                   <button
-                    onClick={() => handleUnsaveSearch(selectedJobId)}
-                    disabled={isSaving}
-                    className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled
+                    className="px-6 py-3 bg-green-800 hover:bg-green-900 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors flex items-center gap-2 cursor-default"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1407,12 +1430,23 @@ export default function Home() {
                   <button
                     onClick={() => handleSaveSearch(selectedJobId)}
                     disabled={isSaving}
-                    className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-500 text-white font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    {isSaving ? 'Saving...' : 'Add to Shared'}
+                    {isSaving ? (
+                      <>
+                        <svg className="w-5 h-5 animate-spin shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add to Shared
+                      </>
+                    )}
                   </button>
                 )}
               </div>
@@ -1814,24 +1848,22 @@ function JobHistorySidebar({
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                               </button>
-                              {/* Share button - only in Personal tab */}
-                              {activeTab === 'personal' && (
-                                <button
-                                  onClick={(e) => handleShare(job.jobId, e)}
-                                  className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                                  title={copySuccess === job.jobId ? 'Copied!' : 'Share link'}
-                                >
-                                  {copySuccess === job.jobId ? (
-                                    <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  ) : (
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                                    </svg>
-                                  )}
-                                </button>
-                              )}
+                              {/* Share button - available for both Personal and Shared queries */}
+                              <button
+                                onClick={(e) => handleShare(job.jobId, e)}
+                                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                title={copySuccess === job.jobId ? 'Copied!' : 'Share link'}
+                              >
+                                {copySuccess === job.jobId ? (
+                                  <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                                  </svg>
+                                )}
+                              </button>
                               {/* Delete button - available in both tabs */}
                               <button
                                 onClick={(e) => handleDelete(job.jobId, e)}

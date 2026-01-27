@@ -13,6 +13,7 @@ Holiday Destination Finder (HDF) is a Python backend + Next.js frontend applicat
 - Displays ranked results in a beautiful, responsive web interface
 - Supports **parallel processing** for fast searches across 100+ destinations
 - Implements **async job processing** with Redis queue for scalable web deployment
+- Persists search history in **Supabase** (optional): Personal/Shared tabs, custom names, hide/delete
 
 ## ✨ Features
 
@@ -33,7 +34,8 @@ Holiday Destination Finder (HDF) is a Python backend + Next.js frontend applicat
 - **Parallel processing**: ThreadPoolExecutor for concurrent destination processing
   - 10 workers locally (faster processing)
   - 3 workers on web deployment (rate limit friendly)
-- **Job queue system**: Redis-based queue for async job processing
+- **Job queue system**: Redis-based queue for async job processing; optional **Supabase dual-write** on job completion (only for jobs with results; failed jobs are not persisted)
+- **Client identification**: `X-Client-ID` header (frontend sends a localStorage UUID) for associating jobs with users and Supabase persistence
 - **RESTful API**: FastAPI with comprehensive input validation
 - **Progress tracking**: Real-time progress updates during search with queue position
 - **Job cancellation**: Cancel queued or running searches
@@ -47,12 +49,14 @@ Holiday Destination Finder (HDF) is a Python backend + Next.js frontend applicat
 - **Modern UI**: Next.js 16 with React 19, Tailwind CSS v4
 - **Dark/Light mode**: Toggleable theme with system preference detection
 - **Internationalization**: Support for 6 languages (English, Polish, Spanish, Portuguese, German, French)
-- **Job history sidebar**: View and manage previous searches with drag-and-drop reordering
+- **Job history sidebar**: **Personal** tab (your searches) and **Shared** tab (saved searches); drag-and-drop reordering; per-search **custom names** (rename); **hide** from Personal, **delete** from Shared (soft delete)
+- **Shareable URLs**: Open a search via `/?jobId=<job_id>`; backend falls back to Supabase when job has expired from Redis
 - **Real-time updates**: Live progress tracking with queue position and current destination
 - **Job cancellation**: Cancel ongoing or queued searches
 - **Responsive design**: Mobile-friendly interface
 - **Beautiful results**: Flag backgrounds, airline logos, and detailed flight information
-- **Google Flights integration**: Direct booking links with automatic origin resolution
+- **Google Flights integration**: Direct booking links via `/flight-loading` (resolves cheapest origin then redirects to Google Flights)
+- **Booking.com links**: Hotel search links for each result (city, check-in/out dates)
 - **Multi-airport origin support**: Visual indication when searching from multiple airports
 
 ## 🏗️ Architecture
@@ -63,7 +67,7 @@ Holiday Destination Finder (HDF) is a Python backend + Next.js frontend applicat
 holiday-destination-finder/
 ├── data/
 │   ├── cities_local.csv      # Full destination list (119 cities) for local runs
-│   └── cities_web.csv        # Curated list (43 cities) for web deployment
+│   └── cities_web.csv        # Curated list (41 cities) for web deployment
 ├── frontend/                  # Next.js frontend application
 │   ├── app/
 │   │   ├── components/       # React components
@@ -80,6 +84,7 @@ holiday-destination-finder/
 │   ├── lib/
 │   │   ├── api.ts            # API client
 │   │   ├── airports.ts       # Airport data and utilities
+│   │   ├── client-id.ts      # Client ID (localStorage UUID for Supabase)
 │   │   └── country-flags.ts  # Flag utilities
 │   └── package.json
 ├── src/holiday_destination_finder/
@@ -98,8 +103,13 @@ holiday-destination-finder/
 │       ├── wizzair_test.py  # Wizz Air integration
 │       ├── serpapi_test.py  # SerpAPI integration
 │       └── openmeteo.py     # Weather API integration
+├── scripts/                   # Test and local-run scripts
+│   ├── test_api.py
+│   ├── test_local.sh
+│   └── test_search_local.sh
+├── supabase_migration.sql     # Supabase schema (search_results, saved_searches, hidden_searches)
 ├── requirements.txt          # Python dependencies
-├── pyproject.toml           # Python project configuration
+├── pyproject.toml             # Python project configuration
 └── README.md
 ```
 
@@ -130,14 +140,22 @@ holiday-destination-finder/
 4. **Next.js Frontend**: 
    - React-based UI with real-time job status polling
    - Context-based state management (theme, language, currency)
-   - Job history persistence in localStorage
+   - Job history from Supabase (Personal/Shared) when configured; client ID in localStorage for user identification
    - Responsive design with Tailwind CSS
 
-5. **Redis Queue**: 
+5. **Redis Queue** (`kv_queue.py`): 
    - Job queue for async processing (`queue:jobs` list)
-   - Job status tracking (`job:{id}` hash)
+   - Job status tracking (`job:{id}` hash); `client_id` stored when provided (from `X-Client-ID`)
    - TTL-based expiration (1 hour)
+   - On `set_done`: dual-write to Supabase when results exist (skips save for empty/failed jobs)
    - Rate limiting storage
+
+6. **Supabase** (optional, `supabase.py`): 
+   - **search_results**: job_id, client_id, params, result, status, custom_name, expires_at (7-day sliding TTL), last_accessed_at
+   - **saved_searches**: client_id, job_id, custom_name (per user), deleted_at (soft delete for Shared tab)
+   - **hidden_searches**: client_id, job_id (hide from Personal tab)
+   - Frontend sends `X-Client-ID` (localStorage UUID); backend uses it for persist/save/hide/rename
+   - Schema and migrations in `supabase_migration.sql`
 
 ### Design Decisions
 
@@ -186,7 +204,8 @@ holiday-destination-finder/
 
 - **Python 3.11+**
 - **Node.js 18+** and npm
-- **Redis** (for job queue - required for web deployment)
+- **Redis** (for job queue; required for web deployment)
+- **Supabase** (optional; for search history: Personal/Shared tabs, custom names, hide/delete). Run `supabase_migration.sql` in the SQL Editor.
 - **Amadeus API credentials** (optional, for Amadeus provider)
 - **SerpAPI key** (optional, for SerpAPI provider)
 - **Browserless.io API key** (optional, for origin airport resolution)
@@ -217,6 +236,10 @@ Create a `.env` file or export the following:
 ```bash
 # Required for web deployment
 export REDIS_URL="redis://localhost:6379/0"  # Or your Redis URL
+
+# Optional: Supabase (for search history: Personal/Shared, custom names, hide/delete)
+export SUPABASE_URL="https://your-project.supabase.co"
+export SUPABASE_KEY="your-anon-or-service-key"
 
 # Optional: Amadeus API (for Amadeus provider)
 export AMADEUS_API_KEY_V2TEST="your_key"
@@ -262,6 +285,8 @@ uvicorn holiday_destination_finder.api:app --workers 1 --host 0.0.0.0 --port 800
 ```
 
 **Important**: Use `--workers 1` to avoid spawning multiple worker threads. The worker is started as a daemon thread in `api.py`, so multiple uvicorn workers would create duplicate workers.
+
+**Client ID (optional, for Supabase)**: The frontend generates a UUID in localStorage and sends it as `X-Client-ID` on requests. The backend stores it with each job and uses it for Supabase persistence (Personal/Shared history). If not sent, search still works but history is not persisted.
 
 ### Frontend Setup
 
@@ -319,7 +344,7 @@ python3 -m holiday_destination_finder.main \
 ## 📊 API Endpoints
 
 ### `GET /search`
-Start a new search job. Returns immediately with a job ID.
+Start a new search job. Returns immediately with a job ID. Optional header `X-Client-ID` is stored with the job for Supabase persistence.
 
 **Query Parameters**:
 - `origin` (string, default: "WRO"): Origin airport IATA code or kgmid (e.g., `WRO`, `/m/05qhw`)
@@ -339,7 +364,7 @@ Start a new search job. Returns immediately with a job ID.
 **Rate Limited**: 30 requests per hour per IP address
 
 ### `GET /jobs/{job_id}`
-Get job status and results.
+Get job status and results. If the job is not in Redis (e.g. expired after 1 hour), the API falls back to Supabase when configured, so shareable links like `/?jobId=<id>` continue to work.
 
 **Response** (queued):
 ```json
@@ -418,6 +443,19 @@ Cancel a queued or running job.
   "job_id": "uuid"
 }
 ```
+
+### Supabase-backed endpoints (require `X-Client-ID` and Supabase config)
+
+All of the following require the `X-Client-ID` header and a configured Supabase instance (`SUPABASE_URL`, `SUPABASE_KEY`). Without them, the endpoints return 503 or 400 as documented below.
+
+- **`GET /jobs`** — List current user's searches. Query param `type`: `personal` (default, own searches) or `shared` (saved searches). Returns list of jobs with `job_id`, `status`, `params`, `payload`, `custom_name`. Hidden/deleted items are excluded.
+- **`POST /jobs/{job_id}/save`** — Add search to user's saved list (Shared tab). 400 if no `X-Client-ID`; 503 if Supabase not configured.
+- **`POST /jobs/{job_id}/unsave`** — Remove search from user's saved list.
+- **`GET /jobs/{job_id}/saved`** — Check if search is saved by current user. Returns `{"saved": true|false}`.
+- **`PUT /jobs/{job_id}/name`** — Rename search. Body: `{"custom_name": "My Trip"|null, "is_saved": true|false}`. `is_saved=true` updates per-user name in saved_searches; `is_saved=false` updates name in search_results (only if client owns the job).
+- **`POST /jobs/{job_id}/hide`** — Hide search from Personal tab (soft delete).
+- **`POST /jobs/{job_id}/unhide`** — Unhide search in Personal tab.
+- **`POST /jobs/{job_id}/delete`** — Soft-delete saved search from Shared tab (sets `deleted_at` on saved_searches).
 
 ### `GET /health`
 Health check endpoint.
@@ -530,7 +568,7 @@ The system supports three types of origins:
   - More comprehensive coverage
   - Longer processing time (~8-10 minutes with 10 workers)
 
-- **`cities_web.csv`**: Curated list of 43 popular destinations for web deployment
+- **`cities_web.csv`**: Curated list of 41 popular destinations for web deployment
   - Faster processing (~3-4 minutes with 3 workers)
   - Popular destinations only
   - Better user experience
@@ -674,6 +712,7 @@ The frontend supports:
 - `redis>=5.0.0`: Job queue and rate limiting
 - `requests`: HTTP client for API calls
 - `python-dotenv`: Environment variable management
+- `supabase>=2.0.0`: Search history persistence (optional; used when SUPABASE_URL/SUPABASE_KEY are set)
 
 **Flight Providers**:
 - `ryanair-py`: Ryanair API wrapper
@@ -724,6 +763,7 @@ The frontend supports:
 
 2. **Set environment variables** in Render dashboard:
    - `REDIS_URL`: Your Redis instance URL (use Render's Redis addon)
+   - `SUPABASE_URL`, `SUPABASE_KEY`: Optional; enable Personal/Shared history, custom names, hide/delete. Run `supabase_migration.sql` in the Supabase SQL Editor to create `search_results`, `saved_searches`, `hidden_searches`.
    - `AMADEUS_API_KEY_V2TEST`: (Optional) Amadeus API key
    - `AMADEUS_API_SECRET_V2TEST`: (Optional) Amadeus API secret
    - `SERPAPI_API_KEY`: (Optional) SerpAPI key
@@ -751,8 +791,9 @@ uvicorn holiday_destination_finder.api:app --workers 1 --host 0.0.0.0 --port $PO
 
 1. **Connect your repository** to Vercel
 
-2. **Set environment variable**:
+2. **Set environment variables**:
    - `NEXT_PUBLIC_API_URL`: Your backend API URL (e.g., `https://holiday-destination-finder.onrender.com`)
+   - `NEXT_PUBLIC_API_KEY`: (Optional) Same value as backend `API_KEY` if you use API key auth
 
 3. **Deploy**:
    - Vercel will automatically detect Next.js
@@ -781,11 +822,12 @@ docker run -d -p 6379:6379 redis:alpine
 
 ### Running Tests
 
-Currently, the project doesn't include automated tests. Manual testing is done via:
+The project includes manual test scripts in `scripts/`:
 
-- **CLI**: `python3 -m holiday_destination_finder.main ...`
-- **Frontend**: `npm run dev` and test in browser
-- **API**: Use `curl` or Postman to test endpoints
+- **`scripts/test_api.py`**: API tests (endpoints, health, search flow)
+- **`scripts/test_local.sh`**, **`scripts/test_search_local.sh`**: Local backend/CLI runs
+
+No automated test suite (pytest, Jest) is configured. Manual testing is done via CLI, frontend dev server, or the scripts above.
 
 **Example API test**:
 ```bash

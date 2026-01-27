@@ -45,7 +45,13 @@ def set_done(job_id: str, payload: dict):
     r.hdel(key, "processed", "total", "current")
     r.expire(key, JOB_TTL_S)
     
-    # Dual-write to Supabase for persistence
+    # Check if results are empty - don't save empty searches to Supabase
+    results = payload.get("results", [])
+    if not results or len(results) == 0:
+        logger.info(f"[kv_queue] Job {job_id} completed with no results, skipping Supabase save")
+        return
+    
+    # Dual-write to Supabase for persistence (only for searches with results)
     if save_search_result:
         try:
             # Get client_id and params from Redis
@@ -69,25 +75,8 @@ def set_failed(job_id: str, error: str):
     r.hdel(key, "processed", "total", "current")
     r.expire(key, JOB_TTL_S)
     
-    # Dual-write to Supabase for persistence
-    if save_search_result:
-        try:
-            # Get client_id and params from Redis
-            job_data = get_job(job_id)
-            if job_data:
-                client_id = job_data.get("client_id")
-                params_str = job_data.get("params")
-                if client_id and params_str:
-                    try:
-                        params = json.loads(params_str) if isinstance(params_str, str) else params_str
-                        # Save error as result payload
-                        error_payload = {"error": error}
-                        save_search_result(job_id, client_id, params, error_payload, "failed")
-                    except Exception as e:
-                        # Log but don't fail - Redis write succeeded
-                        logger.error(f"[kv_queue] Failed to write to Supabase for job {job_id}: {e}")
-        except Exception as e:
-            logger.error(f"[kv_queue] Error during Supabase dual-write for job {job_id}: {e}")
+    # Do NOT save failed queries to Supabase - they shouldn't appear in user history
+    # Failed queries remain in Redis for short-term error display but are not persisted
 
 def set_progress(
     job_id: str,

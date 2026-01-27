@@ -86,3 +86,33 @@ ALTER TABLE hidden_searches ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow all operations on hidden_searches" ON hidden_searches
   FOR ALL USING (true) WITH CHECK (true);
+
+
+-- Migration: Add per-user custom names and soft delete for saved searches
+-- Run this in Supabase SQL Editor: https://cerlvjwbausxbkeppqrq.supabase.co/project/_/sql/new
+
+-- Add custom_name and deleted_at to saved_searches table
+ALTER TABLE saved_searches 
+ADD COLUMN IF NOT EXISTS custom_name TEXT,
+ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS idx_saved_searches_deleted_at ON saved_searches(deleted_at);
+
+-- Create hidden_searches table for Personal tab deletions
+CREATE TABLE IF NOT EXISTS hidden_searches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id TEXT NOT NULL,
+  job_id TEXT NOT NULL,
+  hidden_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(client_id, job_id),
+  FOREIGN KEY (job_id) REFERENCES search_results(job_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_hidden_searches_client_id ON hidden_searches(client_id);
+CREATE INDEX IF NOT EXISTS idx_hidden_searches_job_id ON hidden_searches(job_id);
+
+-- Enable RLS for hidden_searches
+ALTER TABLE hidden_searches ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all operations on hidden_searches" ON hidden_searches
+  FOR ALL USING (true) WITH CHECK (true);
