@@ -35,6 +35,10 @@ try:
         unsave_search_for_client,
         is_search_saved,
         update_search_name,
+        hide_search_for_client,
+        unhide_search_for_client,
+        is_search_hidden,
+        delete_saved_search_for_client,
     )
 except ImportError:
     get_search_result = None
@@ -45,6 +49,10 @@ except ImportError:
     unsave_search_for_client = None
     is_search_saved = None
     update_search_name = None
+    hide_search_for_client = None
+    unhide_search_for_client = None
+    is_search_hidden = None
+    delete_saved_search_for_client = None
     logger.warning("[api] Supabase module not available")
 
 # Redis connection for rate limiting
@@ -482,6 +490,7 @@ def check_saved(
 
 class RenameRequest(BaseModel):
     custom_name: Optional[str] = None
+    is_saved: bool = False  # If True, update custom_name in saved_searches (for shared queries)
 
 
 @app.put("/jobs/{job_id}/name", dependencies=[Depends(authenticated_endpoint)])
@@ -490,7 +499,11 @@ def rename_job(
     job_id: str,
     rename_request: RenameRequest
 ):
-    """Rename a search (only if client_id matches the search's creator)."""
+    """
+    Rename a search.
+    - If is_saved=True: Update custom_name in saved_searches (for shared queries, per-user)
+    - If is_saved=False: Update custom_name in search_results (only if client_id matches creator)
+    """
     client_id = _get_client_id(request)
     if not client_id:
         raise HTTPException(status_code=400, detail="X-Client-ID header is required")
@@ -498,11 +511,74 @@ def rename_job(
     if not update_search_name:
         raise HTTPException(status_code=503, detail="Supabase is not configured")
     
-    success = update_search_name(job_id, client_id, rename_request.custom_name)
+    success = update_search_name(job_id, client_id, rename_request.custom_name, is_saved=rename_request.is_saved)
     if not success:
-        raise HTTPException(status_code=403, detail="You can only rename your own searches")
+        if rename_request.is_saved:
+            raise HTTPException(status_code=404, detail="Saved search not found")
+        else:
+            raise HTTPException(status_code=403, detail="You can only rename your own searches")
     
     return {"status": "updated", "job_id": job_id, "custom_name": rename_request.custom_name}
+
+
+@app.post("/jobs/{job_id}/hide", dependencies=[Depends(authenticated_endpoint)])
+def hide_job(
+    request: Request,
+    job_id: str
+):
+    """Hide a search from Personal tab (soft delete)."""
+    client_id = _get_client_id(request)
+    if not client_id:
+        raise HTTPException(status_code=400, detail="X-Client-ID header is required")
+    
+    if not hide_search_for_client:
+        raise HTTPException(status_code=503, detail="Supabase is not configured")
+    
+    success = hide_search_for_client(client_id, job_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to hide search")
+    
+    return {"status": "hidden", "job_id": job_id}
+
+
+@app.post("/jobs/{job_id}/unhide", dependencies=[Depends(authenticated_endpoint)])
+def unhide_job(
+    request: Request,
+    job_id: str
+):
+    """Unhide a search from Personal tab."""
+    client_id = _get_client_id(request)
+    if not client_id:
+        raise HTTPException(status_code=400, detail="X-Client-ID header is required")
+    
+    if not unhide_search_for_client:
+        raise HTTPException(status_code=503, detail="Supabase is not configured")
+    
+    success = unhide_search_for_client(client_id, job_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to unhide search")
+    
+    return {"status": "unhidden", "job_id": job_id}
+
+
+@app.post("/jobs/{job_id}/delete", dependencies=[Depends(authenticated_endpoint)])
+def delete_saved_job(
+    request: Request,
+    job_id: str
+):
+    """Soft delete a saved search from Shared tab (set deleted_at)."""
+    client_id = _get_client_id(request)
+    if not client_id:
+        raise HTTPException(status_code=400, detail="X-Client-ID header is required")
+    
+    if not delete_saved_search_for_client:
+        raise HTTPException(status_code=503, detail="Supabase is not configured")
+    
+    success = delete_saved_search_for_client(client_id, job_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete saved search")
+    
+    return {"status": "deleted", "job_id": job_id}
 
 
 # ============================================================================

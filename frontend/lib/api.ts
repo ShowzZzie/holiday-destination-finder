@@ -294,24 +294,76 @@ export async function isSearchSaved(jobId: string): Promise<boolean> {
 }
 
 /**
- * Rename a search (only works for searches created by the current user).
+ * Rename a search.
  * 
  * @param jobId - Job ID to rename
  * @param customName - New custom name (null to remove custom name and use default)
+ * @param isSaved - If true, update custom_name in saved_searches (for shared queries). If false, update in search_results (only for own searches)
  */
-export async function renameSearch(jobId: string, customName: string | null): Promise<void> {
+export async function renameSearch(jobId: string, customName: string | null, isSaved: boolean = false): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/name`, {
     method: 'PUT',
     headers: {
       ...getAuthHeaders(),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ custom_name: customName }),
+    body: JSON.stringify({ custom_name: customName, is_saved: isSaved }),
   });
 
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Failed to rename search: ${error}`);
+  }
+}
+
+/**
+ * Hide a search from Personal tab (soft delete).
+ * 
+ * @param jobId - Job ID to hide
+ */
+export async function hideSearch(jobId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/hide`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to hide search: ${error}`);
+  }
+}
+
+/**
+ * Unhide a search from Personal tab.
+ * 
+ * @param jobId - Job ID to unhide
+ */
+export async function unhideSearch(jobId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/unhide`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to unhide search: ${error}`);
+  }
+}
+
+/**
+ * Delete a saved search from Shared tab (soft delete).
+ * 
+ * @param jobId - Job ID to delete
+ */
+export async function deleteSavedSearch(jobId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/delete`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to delete saved search: ${error}`);
   }
 }
 

@@ -143,7 +143,7 @@ def touch_search_result(job_id: str) -> bool:
 
 def get_search_results_by_client(client_id: str) -> List[Dict[str, Any]]:
     """
-    Get all searches created by a client_id (Personal tab).
+    Get all searches created by a client_id (Personal tab), excluding hidden ones.
     
     Args:
         client_id: Client identifier
@@ -155,14 +155,27 @@ def get_search_results_by_client(client_id: str) -> List[Dict[str, Any]]:
         return []
     
     try:
+        # Get all jobs for this client
         response = _supabase.table("search_results")\
             .select("*")\
             .eq("client_id", client_id)\
             .order("last_accessed_at", desc=True)\
             .execute()
         
+        # Get hidden job IDs for this client
+        hidden_response = _supabase.table("hidden_searches")\
+            .select("job_id")\
+            .eq("client_id", client_id)\
+            .execute()
+        
+        hidden_job_ids = {item["job_id"] for item in hidden_response.data}
+        
         results = []
         for item in response.data:
+            # Skip hidden jobs
+            if item["job_id"] in hidden_job_ids:
+                continue
+                
             # Parse JSON fields
             if isinstance(item.get("params"), str):
                 item["params"] = json.loads(item["params"])
@@ -178,22 +191,24 @@ def get_search_results_by_client(client_id: str) -> List[Dict[str, Any]]:
 
 def get_saved_searches_by_client(client_id: str) -> List[Dict[str, Any]]:
     """
-    Get all searches saved by a client_id (Shared tab).
+    Get all searches saved by a client_id (Shared tab), excluding deleted ones.
+    Includes per-user custom_name from saved_searches.
     
     Args:
         client_id: Client identifier
     
     Returns:
-        List of search results, sorted by saved_at DESC
+        List of search results with custom_name, sorted by saved_at DESC
     """
     if _supabase is None:
         return []
     
     try:
-        # Join saved_searches with search_results
+        # Join saved_searches with search_results, exclude deleted
         response = _supabase.table("saved_searches")\
-            .select("*, search_results(*)")\
+            .select("custom_name, saved_at, search_results(*)")\
             .eq("client_id", client_id)\
+            .is_("deleted_at", "null")\
             .order("saved_at", desc=True)\
             .execute()
         
@@ -206,6 +221,11 @@ def get_saved_searches_by_client(client_id: str) -> List[Dict[str, Any]]:
                     search_result["params"] = json.loads(search_result["params"])
                 if isinstance(search_result.get("result"), str):
                     search_result["result"] = json.loads(search_result["result"])
+                
+                # Override custom_name with per-user custom_name from saved_searches
+                if item.get("custom_name"):
+                    search_result["custom_name"] = item["custom_name"]
+                
                 results.append(search_result)
         
         return results
@@ -301,14 +321,16 @@ def is_search_saved(client_id: str, job_id: str) -> bool:
         return False
 
 
-def update_search_name(job_id: str, client_id: str, custom_name: Optional[str]) -> bool:
+def update_search_name(job_id: str, client_id: str, custom_name: Optional[str], is_saved: bool = False) -> bool:
     """
-    Update custom name for a search (only if client_id matches).
+    Update custom name for a search.
     
     Args:
         job_id: Job identifier
-        client_id: Client identifier (must match the search's creator)
+        client_id: Client identifier
         custom_name: Custom name (None to remove custom name)
+        is_saved: If True, update custom_name in saved_searches (for shared queries).
+                  If False, update in search_results (only if client_id matches creator)
     
     Returns:
         True if updated successfully, False otherwise
@@ -317,31 +339,156 @@ def update_search_name(job_id: str, client_id: str, custom_name: Optional[str]) 
         return False
     
     try:
-        # First verify the client_id matches
-        response = _supabase.table("search_results")\
-            .select("client_id")\
-            .eq("job_id", job_id)\
-            .execute()
-        
-        if not response.data or len(response.data) == 0:
-            logger.warning(f"[supabase] Job {job_id} not found")
-            return False
-        
-        if response.data[0]["client_id"] != client_id:
-            logger.warning(f"[supabase] Client {client_id} does not own job {job_id}")
-            return False
-        
-        # Update custom_name
-        update_data = {"custom_name": custom_name}
-        _supabase.table("search_results")\
-            .update(update_data)\
-            .eq("job_id", job_id)\
-            .execute()
-        
-        logger.info(f"[supabase] Updated custom name for job {job_id}")
-        return True
+        if is_saved:
+            # Update custom_name in saved_searches (per-user custom name for saved searches)
+            update_data = {"custom_name": custom_name}
+            _supabase.table("saved_searches")\
+                .update(update_data)\
+                .eq("client_id", client_id)\
+                .eq("job_id", job_id)\
+                .execute()
+            logger.info(f"[supabase] Updated saved search custom name for job {job_id}")
+            return True
+        else:
+            # Update custom_name in search_results (only if client_id matches creator)
+            response = _supabase.table("search_results")\
+                .select("client_id")\
+                .eq("job_id", job_id)\
+                .execute()
+            
+            if not response.data or len(response.data) == 0:
+                logger.warning(f"[supabase] Job {job_id} not found")
+                return False
+            
+            if response.data[0]["client_id"] != client_id:
+                logger.warning(f"[supabase] Client {client_id} does not own job {job_id}")
+                return False
+            
+            # Update custom_name
+            update_data = {"custom_name": custom_name}
+            _supabase.table("search_results")\
+                .update(update_data)\
+                .eq("job_id", job_id)\
+                .execute()
+            
+            logger.info(f"[supabase] Updated custom name for job {job_id}")
+            return True
     except Exception as e:
         logger.error(f"[supabase] Failed to update custom name for job {job_id}: {e}")
+        return False
+
+
+def hide_search_for_client(client_id: str, job_id: str) -> bool:
+    """
+    Hide a search from Personal tab for a client (soft delete).
+    
+    Args:
+        client_id: Client identifier
+        job_id: Job identifier
+    
+    Returns:
+        True if hidden successfully, False otherwise
+    """
+    if _supabase is None:
+        return False
+    
+    try:
+        data = {
+            "client_id": client_id,
+            "job_id": job_id,
+        }
+        
+        _supabase.table("hidden_searches").upsert(data, on_conflict="client_id,job_id").execute()
+        logger.info(f"[supabase] Hidden search {job_id} for client {client_id}")
+        return True
+    except Exception as e:
+        logger.error(f"[supabase] Failed to hide search {job_id} for client {client_id}: {e}")
+        return False
+
+
+def unhide_search_for_client(client_id: str, job_id: str) -> bool:
+    """
+    Unhide a search from Personal tab for a client.
+    
+    Args:
+        client_id: Client identifier
+        job_id: Job identifier
+    
+    Returns:
+        True if unhidden successfully, False otherwise
+    """
+    if _supabase is None:
+        return False
+    
+    try:
+        _supabase.table("hidden_searches")\
+            .delete()\
+            .eq("client_id", client_id)\
+            .eq("job_id", job_id)\
+            .execute()
+        
+        logger.info(f"[supabase] Unhidden search {job_id} for client {client_id}")
+        return True
+    except Exception as e:
+        logger.error(f"[supabase] Failed to unhide search {job_id} for client {client_id}: {e}")
+        return False
+
+
+def is_search_hidden(client_id: str, job_id: str) -> bool:
+    """
+    Check if a search is hidden by a client.
+    
+    Args:
+        client_id: Client identifier
+        job_id: Job identifier
+    
+    Returns:
+        True if hidden, False otherwise
+    """
+    if _supabase is None:
+        return False
+    
+    try:
+        response = _supabase.table("hidden_searches")\
+            .select("id")\
+            .eq("client_id", client_id)\
+            .eq("job_id", job_id)\
+            .execute()
+        
+        return len(response.data) > 0
+    except Exception as e:
+        logger.error(f"[supabase] Failed to check if search {job_id} is hidden for client {client_id}: {e}")
+        return False
+
+
+def delete_saved_search_for_client(client_id: str, job_id: str) -> bool:
+    """
+    Soft delete a saved search from Shared tab (set deleted_at).
+    
+    Args:
+        client_id: Client identifier
+        job_id: Job identifier
+    
+    Returns:
+        True if deleted successfully, False otherwise
+    """
+    if _supabase is None:
+        return False
+    
+    try:
+        from datetime import datetime
+        
+        update_data = {"deleted_at": datetime.utcnow().isoformat()}
+        _supabase.table("saved_searches")\
+            .update(update_data)\
+            .eq("client_id", client_id)\
+            .eq("job_id", job_id)\
+            .execute()
+        
+        logger.info(f"[supabase] Soft deleted saved search {job_id} for client {client_id}")
+        return True
+    except Exception as e:
+        logger.error(f"[supabase] Failed to delete saved search {job_id} for client {client_id}: {e}")
         return False
 
 

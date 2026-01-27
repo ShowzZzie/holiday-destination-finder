@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
-import { startSearch, getJobStatus, checkHealth, cancelJob, SearchParams, JobStatus, SearchResult, getMySearches, saveSearch, unsaveSearch, isSearchSaved, renameSearch, getShareableJobUrl } from '@/lib/api';
+import { startSearch, getJobStatus, checkHealth, cancelJob, SearchParams, JobStatus, SearchResult, getMySearches, saveSearch, unsaveSearch, isSearchSaved, renameSearch, getShareableJobUrl, hideSearch, deleteSavedSearch } from '@/lib/api';
 import { COUNTRIES, Country, Airport as AirportData } from '@/lib/airports';
 
 // City grouping for autocomplete
@@ -245,6 +245,11 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'personal' | 'shared'>('personal');
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingJobs, setIsLoadingJobs] = useState(false);
+  const [userOwnedJobIds, setUserOwnedJobIds] = useState<Set<string>>(new Set()); // Track jobs owned by current user
+  // Cache for both tabs to avoid loading flash
+  const [personalJobsCache, setPersonalJobsCache] = useState<Array<{ jobId: string; origin: string; start: string; end: string; trip_length?: number; providers?: string[]; top_n?: number; custom_name?: string }>>([]);
+  const [sharedJobsCache, setSharedJobsCache] = useState<Array<{ jobId: string; origin: string; start: string; end: string; trip_length?: number; providers?: string[]; top_n?: number; custom_name?: string }>>([]);
   // Track the last viewed job's form parameters
   const [lastViewedParams, setLastViewedParams] = useState<SearchParams | null>(null);
   // Local state for number inputs to allow empty values during typing
@@ -520,12 +525,79 @@ export default function Home() {
     checkHealth().then(setIsApiHealthy);
   }, []);
 
-  // Load job history from Supabase on mount and when tab changes
+  // Preload both tabs on mount
   useEffect(() => {
-    const loadJobs = async () => {
+    const preloadTabs = async () => {
+      setIsLoadingJobs(true);
+      try {
+        // Load both tabs in parallel
+        const [personalJobs, sharedJobs] = await Promise.all([
+          getMySearches('personal'),
+          getMySearches('shared'),
+        ]);
+        
+        // Convert to jobHistory format
+        const convertToHistory = (jobs: JobStatus[]) => jobs.map(job => ({
+          jobId: job.job_id,
+          origin: job.params?.origin || 'N/A',
+          start: job.params?.start || 'N/A',
+          end: job.params?.end || 'N/A',
+          trip_length: job.params?.trip_length,
+          providers: job.params?.providers,
+          top_n: job.params?.top_n,
+          custom_name: job.custom_name,
+        }));
+        
+        const personalHistory = convertToHistory(personalJobs);
+        const sharedHistory = convertToHistory(sharedJobs);
+        
+        // Cache both tabs
+        setPersonalJobsCache(personalHistory);
+        setSharedJobsCache(sharedHistory);
+        
+        // Set initial tab data
+        setJobHistory(activeTab === 'personal' ? personalHistory : sharedHistory);
+        
+        // Mark all jobs as valid (they're from Supabase)
+        const allJobIds = new Set([...personalHistory.map(j => j.jobId), ...sharedHistory.map(j => j.jobId)]);
+        setValidJobIds(allJobIds);
+        
+        // Track user-owned jobs
+        setUserOwnedJobIds(new Set(personalHistory.map((j: typeof personalHistory[0]) => j.jobId)));
+      } catch (e) {
+        console.error('Failed to preload jobs from Supabase:', e);
+        // Fallback to localStorage if Supabase fails
+        const saved = localStorage.getItem('jobHistory');
+        if (saved) {
+          try {
+            const history = JSON.parse(saved);
+            setJobHistory(history);
+            setPersonalJobsCache(history);
+            validateJobs(history);
+            setUserOwnedJobIds(new Set(history.map((j: typeof history[0]) => j.jobId)));
+          } catch (err) {
+            console.error('Failed to parse job history:', err);
+          }
+        }
+      } finally {
+        setIsLoadingJobs(false);
+      }
+    };
+    preloadTabs();
+  }, []); // Only run on mount
+
+  // Update jobHistory when tab changes (use cached data)
+  useEffect(() => {
+    if (activeTab === 'personal') {
+      setJobHistory(personalJobsCache);
+    } else {
+      setJobHistory(sharedJobsCache);
+    }
+    
+    // Refresh in background (optional, for new data)
+    const refreshTab = async () => {
       try {
         const jobs = await getMySearches(activeTab);
-        // Convert to jobHistory format
         const history = jobs.map(job => ({
           jobId: job.job_id,
           origin: job.params?.origin || 'N/A',
@@ -536,25 +608,21 @@ export default function Home() {
           top_n: job.params?.top_n,
           custom_name: job.custom_name,
         }));
+        
+        if (activeTab === 'personal') {
+          setPersonalJobsCache(history);
+          setUserOwnedJobIds(new Set(history.map((j: typeof history[0]) => j.jobId)));
+        } else {
+          setSharedJobsCache(history);
+        }
+        
         setJobHistory(history);
-        // Mark all jobs as valid (they're from Supabase)
         setValidJobIds(new Set(history.map(j => j.jobId)));
       } catch (e) {
-        console.error('Failed to load jobs from Supabase:', e);
-        // Fallback to localStorage if Supabase fails
-        const saved = localStorage.getItem('jobHistory');
-        if (saved) {
-          try {
-            const history = JSON.parse(saved);
-            setJobHistory(history);
-            validateJobs(history);
-          } catch (err) {
-            console.error('Failed to parse job history:', err);
-          }
-        }
+        console.error(`Failed to refresh ${activeTab} tab:`, e);
       }
     };
-    loadJobs();
+    refreshTab();
   }, [activeTab]);
 
   // Handle jobId query parameter (for shared links)
@@ -738,6 +806,8 @@ export default function Home() {
         localStorage.setItem('jobHistory', JSON.stringify(updated));
         // Mark this job as valid
         setValidJobIds(prev => new Set([...prev, response.job_id]));
+        // Mark as user-owned (created by current user)
+        setUserOwnedJobIds(prev => new Set([...prev, response.job_id]));
         return updated;
       });
 
@@ -821,6 +891,11 @@ export default function Home() {
       const saved = await isSearchSaved(jobId);
       if (saved) {
         setSavedJobIds(prev => new Set([...prev, jobId]));
+      }
+      // Check if job is owned by user (in Personal tab)
+      const isOwned = jobHistory.some(j => j.jobId === jobId && activeTab === 'personal');
+      if (isOwned) {
+        setUserOwnedJobIds(prev => new Set([...prev, jobId]));
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load job status';
@@ -956,6 +1031,27 @@ export default function Home() {
         onNewSearch={handleNewSearch}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
+        isLoadingJobs={isLoadingJobs}
+        onRenameUpdate={(jobId, customName) => {
+          // Update jobHistory state
+          setJobHistory(prev => prev.map(j => j.jobId === jobId ? { ...j, custom_name: customName } : j));
+          // Update cache
+          if (activeTab === 'personal') {
+            setPersonalJobsCache(prev => prev.map(j => j.jobId === jobId ? { ...j, custom_name: customName } : j));
+          } else {
+            setSharedJobsCache(prev => prev.map(j => j.jobId === jobId ? { ...j, custom_name: customName } : j));
+          }
+        }}
+        onDelete={(jobId) => {
+          // Update jobHistory state
+          setJobHistory(prev => prev.filter(j => j.jobId !== jobId));
+          // Update cache
+          if (activeTab === 'personal') {
+            setPersonalJobsCache(prev => prev.filter(j => j.jobId !== jobId));
+          } else {
+            setSharedJobsCache(prev => prev.filter(j => j.jobId !== jobId));
+          }
+        }}
       />
       
       {/* Main Content */}
@@ -1293,8 +1389,8 @@ export default function Home() {
 
         {jobStatus?.status === 'done' && jobStatus.payload?.results && (
           <>
-            {/* Add to Shared button */}
-            {selectedJobId && (
+            {/* Add to Shared button - only show for shared jobs (not owned by user) */}
+            {selectedJobId && !userOwnedJobIds.has(selectedJobId) && (
               <div className="mb-4 flex justify-center">
                 {savedJobIds.has(selectedJobId) ? (
                   <button
@@ -1430,7 +1526,10 @@ function JobHistorySidebar({
   onReorder,
   onNewSearch,
   open,
-  onToggle
+  onToggle,
+  isLoadingJobs,
+  onRenameUpdate,
+  onDelete
 }: {
   jobHistory: Array<{ jobId: string; origin: string; start: string; end: string; trip_length?: number; providers?: string[]; top_n?: number; custom_name?: string }>;
   validJobIds: Set<string>;
@@ -1443,6 +1542,9 @@ function JobHistorySidebar({
   onNewSearch: () => void;
   open: boolean;
   onToggle: () => void;
+  isLoadingJobs: boolean;
+  onRenameUpdate: (jobId: string, customName: string | undefined) => void;
+  onDelete: (jobId: string) => void;
 }) {
   const { t } = useLanguage();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -1474,13 +1576,34 @@ function JobHistorySidebar({
 
   const handleRenameSave = async (jobId: string) => {
     try {
-      await renameSearch(jobId, renameValue.trim() || null);
+      const isSaved = activeTab === 'shared';
+      await renameSearch(jobId, renameValue.trim() || null, isSaved);
       setRenamingJobId(null);
-      // Reload jobs to get updated name
-      window.location.reload();
+      // Update via callback
+      onRenameUpdate(jobId, renameValue.trim() || undefined);
     } catch (err) {
       console.error('Failed to rename:', err);
       alert('Failed to rename search');
+    }
+  };
+
+  const handleDelete = async (jobId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to delete this search? ${activeTab === 'personal' ? 'It will be hidden from your Personal tab.' : 'It will be removed from your Shared tab.'}`)) {
+      return;
+    }
+    
+    try {
+      if (activeTab === 'personal') {
+        await hideSearch(jobId);
+      } else {
+        await deleteSavedSearch(jobId);
+      }
+      // Notify parent to update state
+      onDelete(jobId);
+    } catch (err) {
+      console.error('Failed to delete:', err);
+      alert('Failed to delete search');
     }
   };
 
@@ -1616,7 +1739,11 @@ function JobHistorySidebar({
         </div>
         <div className="flex flex-col h-[calc(100vh-12rem)]">
           <div className="overflow-y-auto flex-1 p-4">
-            {validJobs.length === 0 ? (
+            {isLoadingJobs ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
+                Loading...
+              </p>
+            ) : validJobs.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
                 {activeTab === 'personal' ? 'No searches yet' : 'No saved searches yet'}
               </p>
@@ -1645,13 +1772,13 @@ function JobHistorySidebar({
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <button
                           onClick={() => onJobSelect(job.jobId)}
-                          className="flex-1 text-left"
+                          className="flex-1 text-left min-w-0"
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
-                            <div className="text-sm font-medium truncate">
+                            <div className="text-sm font-medium truncate min-w-0 flex-1">
                               {renamingJobId === job.jobId ? (
                                 <input
                                   type="text"
@@ -1666,38 +1793,54 @@ function JobHistorySidebar({
                                   autoFocus
                                 />
                               ) : (
-                                getJobDisplayName(job)
+                                <span className="truncate block" title={getJobDisplayName(job)}>
+                                  {getJobDisplayName(job)}
+                                </span>
                               )}
                             </div>
                           </div>
-                          <div className="text-xs font-mono text-gray-500 dark:text-gray-400 truncate mt-1">{job.jobId}</div>
+                          <div className="text-xs font-mono text-gray-500 dark:text-gray-400 truncate mt-1" title={job.jobId}>{job.jobId}</div>
                         </button>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          {activeTab === 'personal' && renamingJobId !== job.jobId && (
+                        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                          {renamingJobId !== job.jobId && (
                             <>
+                              {/* Rename button - available in both tabs */}
                               <button
                                 onClick={(e) => handleRenameStart(job, e)}
-                                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                                 title="Rename"
                               >
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                               </button>
+                              {/* Share button - only in Personal tab */}
+                              {activeTab === 'personal' && (
+                                <button
+                                  onClick={(e) => handleShare(job.jobId, e)}
+                                  className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                  title={copySuccess === job.jobId ? 'Copied!' : 'Share link'}
+                                >
+                                  {copySuccess === job.jobId ? (
+                                    <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  ) : (
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                                    </svg>
+                                  )}
+                                </button>
+                              )}
+                              {/* Delete button - available in both tabs */}
                               <button
-                                onClick={(e) => handleShare(job.jobId, e)}
-                                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                title={copySuccess === job.jobId ? 'Copied!' : 'Share'}
+                                onClick={(e) => handleDelete(job.jobId, e)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                title="Delete"
                               >
-                                {copySuccess === job.jobId ? (
-                                  <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                ) : (
-                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                                  </svg>
-                                )}
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
                               </button>
                             </>
                           )}
