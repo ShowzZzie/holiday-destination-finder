@@ -78,6 +78,7 @@ import { getCountryCode, getFlagUrl, getRegion, ALL_REGIONS, Region } from '@/li
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { useCurrency } from '@/app/contexts/CurrencyContext';
 import DateRangePicker from '@/app/components/DateRangePicker';
+import PageFooter from '@/app/components/PageFooter';
 
 // Mapping of common airline names/codes to IATA codes for logo fetching
 const AIRLINE_MAPPING: Record<string, string> = {
@@ -1594,6 +1595,8 @@ export default function Home() {
             <p className="text-sm whitespace-pre-wrap">{jobStatus.error}</p>
           </div>
         )}
+
+        <PageFooter />
       </div>
     </div>
   );

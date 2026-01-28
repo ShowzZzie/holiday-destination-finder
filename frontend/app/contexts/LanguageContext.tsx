@@ -82,6 +82,9 @@ const translations: Record<Language, Record<string, string>> = {
     'airports': 'airports',
     // Resolving airport
     'findingFlight': 'Finding...',
+    'madeBy': 'Made by {name}',
+    'reportBug': 'Report a Bug',
+    'source': 'Source',
   },
   pl: {
     'title': 'Wyszukiwarka Destynacji Wakacyjnych',
@@ -151,6 +154,9 @@ const translations: Record<Language, Record<string, string>> = {
     'airports': 'lotnisk',
     // Resolving airport
     'findingFlight': 'Szukam...',
+    'madeBy': 'Autor: {name}',
+    'reportBug': 'Zgłoś błąd',
+    'source': 'Kod',
   },
   es: {
     'title': 'Buscador de Destinos Vacacionales',
@@ -220,6 +226,9 @@ const translations: Record<Language, Record<string, string>> = {
     'airports': 'aeropuertos',
     // Resolving airport
     'findingFlight': 'Buscando...',
+    'madeBy': 'Hecho por {name}',
+    'reportBug': 'Reportar un error',
+    'source': 'Código',
   },
   pt: {
     'title': 'Localizador de Destinos de Férias',
@@ -289,6 +298,9 @@ const translations: Record<Language, Record<string, string>> = {
     'airports': 'aeroportos',
     // Resolving airport
     'findingFlight': 'A procurar...',
+    'madeBy': 'Feito por {name}',
+    'reportBug': 'Reportar um erro',
+    'source': 'Código',
   },
   de: {
     'title': 'Urlaubsziel-Finder',
@@ -358,6 +370,9 @@ const translations: Record<Language, Record<string, string>> = {
     'airports': 'Flughäfen',
     // Resolving airport
     'findingFlight': 'Suche...',
+    'madeBy': 'Von {name}',
+    'reportBug': 'Fehler melden',
+    'source': 'Quellcode',
   },
   fr: {
     'title': 'Recherche de Destinations de Vacances',
@@ -427,6 +442,9 @@ const translations: Record<Language, Record<string, string>> = {
     'airports': 'aéroports',
     // Resolving airport
     'findingFlight': 'Recherche...',
+    'madeBy': 'Par {name}',
+    'reportBug': 'Signaler un bug',
+    'source': 'Code source',
   },
 };
 
