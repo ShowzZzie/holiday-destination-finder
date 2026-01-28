@@ -207,11 +207,67 @@ function isExtendedDateRange(endDate: string): boolean {
   const end = new Date(endDate);
   const today = new Date();
 
-  // Calculate the last day of (current month + 5)
-  // new Date(year, month + 1, 0) gives last day of that month
-  const cutoffDate = new Date(today.getFullYear(), today.getMonth() + 6, 0);
+  // Calculate the last day of (current month + 5) - matching backend logic
+  // Backend: cutoff_month = today.month + 5, then gets last day of that month
+  let cutoffMonth = today.getMonth() + 5; // 0-indexed, so +5 means 6 months ahead
+  let cutoffYear = today.getFullYear();
+  if (cutoffMonth > 11) { // > 11 because months are 0-indexed (0-11)
+    cutoffMonth -= 12;
+    cutoffYear += 1;
+  }
+  
+  // Get last day of the cutoff month
+  let cutoffDate: Date;
+  if (cutoffMonth === 11) { // December (month 11)
+    cutoffDate = new Date(cutoffYear, 11, 31);
+  } else {
+    // First day of next month minus 1 day = last day of current month
+    cutoffDate = new Date(cutoffYear, cutoffMonth + 1, 0);
+  }
 
-  return end > cutoffDate;
+  // Compare dates (ignore time component)
+  const endDateOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  const cutoffDateOnly = new Date(cutoffDate.getFullYear(), cutoffDate.getMonth(), cutoffDate.getDate());
+
+  return endDateOnly > cutoffDateOnly;
+}
+
+// Get the latest valid date for SerpAPI coverage (for display in warning message)
+function getLatestValidSerpApiDate(): string {
+  const today = new Date();
+  let cutoffMonth = today.getMonth() + 5;
+  let cutoffYear = today.getFullYear();
+  if (cutoffMonth > 11) {
+    cutoffMonth -= 12;
+    cutoffYear += 1;
+  }
+  
+  let cutoffDate: Date;
+  if (cutoffMonth === 11) {
+    cutoffDate = new Date(cutoffYear, 11, 31);
+  } else {
+    cutoffDate = new Date(cutoffYear, cutoffMonth + 1, 0);
+  }
+  
+  // Format as YYYY-MM-DD
+  const year = cutoffDate.getFullYear();
+  const month = String(cutoffDate.getMonth() + 1).padStart(2, '0');
+  const day = String(cutoffDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Check if origin is a country/city kgmid (starts with /) vs an airport IATA code
+function isOriginKgmid(origin: string): boolean {
+  if (!origin) return false;
+  return origin.startsWith('/');
+}
+
+// Calculate date range in days
+function getDateRangeDays(startDate: string, endDate: string): number {
+  if (!startDate || !endDate) return 0;
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 export default function Home() {
@@ -612,17 +668,28 @@ export default function Home() {
         const fromServerIds = new Set(history.map(j => j.jobId));
         
         if (activeTab === 'personal') {
-          setPersonalJobsCache(prev => {
-            const inProgress = prev.filter(j => recentlyCreatedJobIds.has(j.jobId) && !fromServerIds.has(j.jobId));
-            return [...inProgress, ...history];
+          // Preserve in-progress jobs that aren't yet in Supabase
+          const inProgressFromCache = personalJobsCache.filter(j => recentlyCreatedJobIds.has(j.jobId) && !fromServerIds.has(j.jobId));
+          const combined = [...inProgressFromCache, ...history];
+          setPersonalJobsCache(combined);
+          // Ensure userOwnedJobIds includes:
+          // 1. All jobs from Supabase (user's completed searches)
+          // 2. All recently created jobs (in-progress or just completed)
+          // 3. Previously tracked jobs (to prevent "Add to Shared" from appearing)
+          // This ensures user's own queries don't show "Add to Shared" button
+          setUserOwnedJobIds(prev => {
+            const fromSupabase = new Set(history.map((j: { jobId: string }) => j.jobId));
+            const fromRecent = new Set(Array.from(recentlyCreatedJobIds));
+            // Merge all: previous (to preserve completed jobs), Supabase, and recent
+            return new Set([...Array.from(prev), ...Array.from(fromSupabase), ...Array.from(fromRecent)]);
           });
-          setUserOwnedJobIds(new Set([...history.map((j: { jobId: string }) => j.jobId), ...recentlyCreatedJobIds]));
         } else {
           setSharedJobsCache(history);
         }
         
         setJobHistory(prev => {
           if (activeTab === 'personal') {
+            // Preserve in-progress jobs that aren't yet in Supabase
             const inProgress = prev.filter(j => recentlyCreatedJobIds.has(j.jobId) && !fromServerIds.has(j.jobId));
             return [...inProgress, ...history];
           }
@@ -735,12 +802,9 @@ export default function Home() {
           return updated;
         });
       }
-      // Remove from recently created set after processing
-      setRecentlyCreatedJobIds(prev => {
-        const updated = new Set(prev);
-        updated.delete(jobStatus.job_id);
-        return updated;
-      });
+      // Don't remove from recentlyCreatedJobIds immediately - keep it until job completes
+      // This ensures it stays in userOwnedJobIds during the refresh cycle
+      // It will be removed when job completes (in the completion handler) or when tab refreshes
     }
   }, [jobStatus?.job_id, jobStatus?.payload?.meta, formData, recentlyCreatedJobIds]);
 
@@ -777,6 +841,41 @@ export default function Home() {
           if (status.status === 'done' || status.status === 'failed') {
             setIsSearching(false);
             clearInterval(interval);
+            
+            // When job completes successfully, ensure it stays in userOwnedJobIds if it was user-created
+            // This prevents "Add to Shared" button from showing for user's own queries
+            if (status.status === 'done' && status.payload?.results && recentlyCreatedJobIds.has(status.job_id)) {
+              // Keep it in userOwnedJobIds permanently (even after it's saved to Supabase)
+              setUserOwnedJobIds(prev => new Set([...prev, status.job_id]));
+              
+              // Refresh Personal tab after a short delay to allow Supabase save
+              if (activeTab === 'personal') {
+                setTimeout(() => {
+                  getMySearches('personal').then(jobs => {
+                    const history = jobs.map(job => ({
+                      jobId: job.job_id,
+                      origin: job.params?.origin || 'N/A',
+                      start: job.params?.start || 'N/A',
+                      end: job.params?.end || 'N/A',
+                      trip_length: job.params?.trip_length,
+                      providers: job.params?.providers,
+                      top_n: job.params?.top_n,
+                      custom_name: job.custom_name,
+                    }));
+                    const fromServerIds = new Set(history.map(j => j.jobId));
+                    
+                    // Preserve in-progress jobs that aren't yet in Supabase
+                    const inProgressFromCache = personalJobsCache.filter(j => recentlyCreatedJobIds.has(j.jobId) && !fromServerIds.has(j.jobId));
+                    const combined = [...inProgressFromCache, ...history];
+                    setPersonalJobsCache(combined);
+                    setJobHistory(combined);
+                    
+                    // Ensure userOwnedJobIds includes both Supabase jobs AND recently created jobs
+                    setUserOwnedJobIds(prev => new Set([...Array.from(prev), ...history.map((j: typeof history[0]) => j.jobId), ...Array.from(recentlyCreatedJobIds)]));
+                  }).catch(e => console.error('Failed to refresh Personal tab after completion:', e));
+                }, 2000); // Wait 2 seconds for Supabase save
+              }
+            }
           }
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to poll job status');
@@ -824,6 +923,12 @@ export default function Home() {
         top_n: formData.top_n,
       };
       // New searches always go to Personal tab and show in history immediately
+      // Update both jobHistory and personalJobsCache to ensure it shows up immediately
+      setJobHistory(prev => {
+        const exists = prev.some(item => item.jobId === response.job_id);
+        if (exists) return prev;
+        return [newEntry, ...prev.filter(item => item.jobId !== response.job_id)].slice(0, 20);
+      });
       setPersonalJobsCache(prev => [newEntry, ...prev.filter(item => item.jobId !== response.job_id)].slice(0, 20));
       setActiveTab('personal');
       setValidJobIds(prev => new Set([...prev, response.job_id]));
@@ -1270,10 +1375,27 @@ export default function Home() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('travelDates')}
-                  {/* Inline warning for extended date range */}
+                  {/* Tooltip warning for extended date range */}
                   {isExtendedDateRange(formData.end) && (
-                    <span className="ml-2 text-xs font-normal text-amber-600 dark:text-amber-400">
-                      ⚠ Extended search (Ryanair/Wizzair only)
+                    <span className="group relative inline-block ml-2">
+                      <span className="cursor-help text-xs font-normal text-amber-600 dark:text-amber-400 underline decoration-dotted">
+                        ⚠ Extended search
+                      </span>
+                      <div className="absolute left-0 top-full mt-2 w-80 p-3 bg-amber-50 dark:bg-amber-900 border border-amber-200 dark:border-amber-800 rounded shadow-lg text-xs text-amber-800 dark:text-amber-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                        <div className="font-semibold mb-2">⚠ Date Range Exceeds SerpAPI Coverage</div>
+                        <div className="space-y-2">
+                          <div>The selected date range exceeds SerpAPI's covered dates. Therefore we can only look for <strong>Wizz Air and Ryanair flights</strong>, which will only cover <strong>Europe</strong>.</div>
+                          <div>The Ryanair and Wizz Air search will take noticeably longer than the SerpAPI search. Please optimize by selecting a single departure airport, and a relatively short Travel Dates date range.</div>
+                          <div>For broader coverage and more possible destinations, please ensure your end date is <strong>{getLatestValidSerpApiDate()}</strong> at most.</div>
+                          {isOriginKgmid(formData.origin) && getDateRangeDays(formData.start, formData.end) > 7 && (
+                            <div className="font-semibold text-amber-900 dark:text-amber-200 mt-2 pt-2 border-t border-amber-300 dark:border-amber-700">
+                              ⚠ Wide range ({getDateRangeDays(formData.start, formData.end)} days) from {formData.origin.startsWith('/m/') ? 'country' : 'city'} may take 1+ hour.
+                            </div>
+                          )}
+                        </div>
+                        {/* Arrow pointing up */}
+                        <div className="absolute bottom-full left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-amber-200 dark:border-b-amber-800"></div>
+                      </div>
                     </span>
                   )}
                 </label>

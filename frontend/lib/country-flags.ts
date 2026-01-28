@@ -21,6 +21,7 @@ const countryNameToCode: Record<string, string> = {
   'Austria': 'AT',
   'Poland': 'PL',
   'Czech Republic': 'CZ',
+  'Czechia': 'CZ',
   'Hungary': 'HU',
   'Romania': 'RO',
   'Bulgaria': 'BG',
@@ -106,5 +107,7 @@ export function getRegion(countryName: string): Region | null {
 }
 
 export function getFlagUrl(countryCode: string, size: 'w20' | 'w40' | 'w80' | 'w160' | 'w320' | 'w640' | 'w1280' | 'w2560' = 'w40'): string {
+  // Use PNG format - flagcdn.com supports PNG with size parameters
+  // SVG format is not supported with size parameters on flagcdn.com
   return `https://flagcdn.com/${size}/${countryCode.toLowerCase()}.png`;
 }
